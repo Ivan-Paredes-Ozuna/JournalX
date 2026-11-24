@@ -11,7 +11,8 @@ from django.template.loader import render_to_string
 from .models import *
 from .forms import *
 from crearpublicaciones.models import Comentario
-from django.contrib.auth.decorators import login_required 
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST 
 from crearpublicaciones.models import Publicacion
 from Perfil.models import *
 from Perfil.forms import *
@@ -494,20 +495,15 @@ def perfil(request, username):
     })
 
 @login_required
+@login_required
+@require_POST
 def eliminar_usuario(request, user_id):
     """
-    Vista para eliminar un usuario específico basado en su ID.
-
-    Argumentos:
-        request (HttpRequest): La solicitud HTTP.
-        user_id (int): El ID del usuario que se desea eliminar.
-
-    Retorna:
-        HttpResponse: Redirige a la página principal 'home' después de eliminar el usuario.
+    Elimina la cuenta de quien está conectado.
     """
-    
-    usuario = User.objects.get(id=user_id)
-    usuario.delete()
+    if request.user.id != user_id:
+        return HttpResponseForbidden()
+    request.user.delete()
     return redirect('home')
 
 def search(request):

@@ -3,3 +3,7 @@ __pycache__/
 *.env
 /IS2_Proyecto/__pycache__
 /login/__pycache__
+
+# Referencia local de skills. No forma parte de la aplicación.
+skills/
+skills-main/

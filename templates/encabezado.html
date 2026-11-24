@@ -20,8 +20,8 @@
         <div class="header-bar">
             <a class="brand" href="{% url 'home' %}">Journal X</a>
             <form class="header-search" action="{% url 'search' %}" method="get" role="search">
-                <label class="sr-only" for="buscar">Buscar publicaciones</label>
-                <input id="buscar" type="search" name="keyword" placeholder="Buscar por título o texto" value="{{ keyword|default:'' }}">
+                <label class="sr-only" for="buscar">Buscar textos</label>
+                <input id="buscar" type="search" name="keyword" placeholder="Buscar textos" value="{{ keyword|default:'' }}">
                 <button type="submit">Buscar</button>
             </form>
             <button type="button" class="nav-toggle btn-ghost" aria-expanded="false" aria-controls="site-nav">Menú</button>
@@ -49,7 +49,7 @@
                     <details class="menu">
                         <summary>Escribir</summary>
                         <div class="menu-panel">
-                            <p class="menu-note">El texto queda en borrador hasta que pase a revisión.</p>
+                            <p class="menu-note">El borrador se queda aquí hasta que lo envíes a revisión.</p>
                             {% for i in categorias %}
                                 {% if i.estado == 'Activo' and 'crear contenido' in permisos_categoria|get_item:i.id %}
                                     <a href="{% url 'seleccionar_plantilla' i.id %}">{{ i.descripcion_corta }}</a>
@@ -59,80 +59,59 @@
                     </details>
                 </li>
                 {% endif %}
-                <li><a class="{% if request.resolver_match.url_name == 'mis_publicaciones' %}is-active{% endif %}" href="{% url 'mis_publicaciones' %}">Mis publicaciones</a></li>
-                {% if 'cambiar estado publicacion' in permisos_usuario %}
-                <li>
-                    <details class="menu">
-                        <summary>Revisión</summary>
-                        <div class="menu-panel">
-                            <p class="menu-note">Arrastra una tarjeta para cambiar su estado.</p>
-                            {% for i in categorias %}
-                                {% if i.estado == 'Activo' and 'cambiar estado publicacion' in permisos_categoria|get_item:i.id %}
-                                    <a href="{% url 'kanban_board' i.id %}">{{ i.descripcion_corta }}</a>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </details>
-                </li>
-                {% endif %}
-                {% if 'gestionar contenido otros' in permisos_usuario %}
-                <li>
-                    <details class="menu">
-                        <summary>Contenido de otros</summary>
-                        <div class="menu-panel">
-                            {% for i in categorias %}
-                                {% if i.estado == 'Activo' and 'gestionar contenido otros' in permisos_categoria|get_item:i.id %}
-                                    <a href="{% url 'gestionPublicacionOtros' i.id %}">{{ i.descripcion_corta }}</a>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </details>
-                </li>
-                {% endif %}
-                {% if 'acceder reportes' in permisos_usuario %}
-                <li>
-                    <details class="menu">
-                        <summary>Reportes</summary>
-                        <div class="menu-panel">
-                            <a href="{% url 'listaReportes' %}">Todos los reportes</a>
-                            <a href="{% url 'masVistos' %}">Más leídos</a>
-                            <a href="{% url 'masLikeados' %}">Con más me gusta</a>
-                            <a href="{% url 'publicadoPorTiempo' %}">Publicados por fecha</a>
-                            <a href="{% url 'porTiempo' %}">Redactados por fecha</a>
-                            <a href="{% url 'promedioRevision' %}">Tiempo de revisión</a>
-                            <a href="{% url 'inactivosPorFecha' %}">Inactivos</a>
-                        </div>
-                    </details>
-                </li>
-                {% endif %}
-                {% if 'asignar roles' in permisos_usuario or 'gestionar roles' in permisos_usuario or 'gestionar categorias' in permisos_usuario %}
-                <li>
-                    <details class="menu">
-                        <summary>Administración</summary>
-                        <div class="menu-panel">
-                            {% if 'asignar roles' in permisos_usuario %}
-                                <a href="{% url 'gestionrol' %}">Asignar rol</a>
-                            {% endif %}
-                            {% if 'gestionar roles' in permisos_usuario %}
-                                <a href="{% url 'adicionrol' %}">Roles</a>
-                            {% endif %}
-                            {% if 'gestionar categorias' in permisos_usuario %}
-                                <a href="{% url 'gestioncategoria' %}">Categorías</a>
-                            {% endif %}
-                        </div>
-                    </details>
-                </li>
-                {% endif %}
                 {% if request.user.is_authenticated %}
+                <li>
+                    <details class="menu">
+                        <summary>Revisar</summary>
+                        <div class="menu-panel">
+                            <a href="{% url 'mis_publicaciones' %}">Mis textos</a>
+                            {% if 'cambiar estado publicacion' in permisos_usuario %}
+                                <p class="menu-note">Mueve cada texto de estado.</p>
+                                {% for i in categorias %}
+                                    {% if i.estado == 'Activo' and 'cambiar estado publicacion' in permisos_categoria|get_item:i.id %}
+                                        <a href="{% url 'kanban_board' i.id %}">{{ i.descripcion_corta }}</a>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            {% if 'gestionar contenido otros' in permisos_usuario %}
+                                <p class="menu-note">Textos de otros.</p>
+                                {% for i in categorias %}
+                                    {% if i.estado == 'Activo' and 'gestionar contenido otros' in permisos_categoria|get_item:i.id %}
+                                        <a href="{% url 'gestionPublicacionOtros' i.id %}">{{ i.descripcion_corta }}</a>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            {% if 'acceder reportes' in permisos_usuario %}
+                                <p class="menu-note">Reportes</p>
+                                <a href="{% url 'listaReportes' %}">Todos</a>
+                                <a href="{% url 'masVistos' %}">Más leídos</a>
+                                <a href="{% url 'masLikeados' %}">Con más me gusta</a>
+                                <a href="{% url 'publicadoPorTiempo' %}">Publicados por fecha</a>
+                                <a href="{% url 'porTiempo' %}">Redactados por fecha</a>
+                                <a href="{% url 'promedioRevision' %}">Tiempo de revisión</a>
+                                <a href="{% url 'inactivosPorFecha' %}">Inactivos</a>
+                            {% endif %}
+                            {% if 'asignar roles' in permisos_usuario or 'gestionar roles' in permisos_usuario or 'gestionar categorias' in permisos_usuario %}
+                                <p class="menu-note">Administración</p>
+                                {% if 'asignar roles' in permisos_usuario %}
+                                    <a href="{% url 'gestionrol' %}">Asignar rol</a>
+                                {% endif %}
+                                {% if 'gestionar roles' in permisos_usuario %}
+                                    <a href="{% url 'adicionrol' %}">Roles</a>
+                                {% endif %}
+                                {% if 'gestionar categorias' in permisos_usuario %}
+                                    <a href="{% url 'gestioncategoria' %}">Categorías</a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </details>
+                </li>
                 <li>
                     <details class="menu">
                         <summary>Cuenta</summary>
                         <div class="menu-panel">
                             <a href="{% url 'perfil' request.user.username %}">{{ request.user.username }}</a>
                             <a href="{% url 'ajustes' %}">Ajustes</a>
-                            <a href="{% url 'ajustes' %}#Personal">Datos personales</a>
-                            <a href="{% url 'ajustes' %}#Seguridad">Seguridad</a>
-                            <a href="{% url 'ajustes' %}#Notificacion">Notificaciones</a>
                             <a href="{% url 'exit' %}">Cerrar sesión</a>
                         </div>
                     </details>
@@ -148,17 +127,55 @@
 
     <footer class="site-footer">
         <div class="footer-inner">
-            <div>
+            <div class="footer-brand">
                 <p class="brand">Journal X</p>
-                <p>Publicaciones para leer, escribir y revisar.</p>
+                <p>Textos para leer, escribir y revisar.</p>
             </div>
-            <ul>
-                <li><a href="{% url 'home' %}">Inicio</a></li>
-                <li><a href="{% url 'categoria' %}">Categorías</a></li>
-                {% if request.user.is_authenticated %}
-                    <li><a href="{% url 'ajustes' %}">Ajustes</a></li>
+            <nav class="footer-nav" aria-label="Pie de página">
+                <div class="footer-col">
+                    <p class="kicker">Leer</p>
+                    <ul>
+                        <li><a href="{% url 'home' %}">Inicio</a></li>
+                        <li><a href="{% url 'categoria' %}">Categorías</a></li>
+                        {% if request.user.is_authenticated %}
+                            <li><a href="{% url 'mis_publicaciones' %}">Mis textos</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <p class="kicker">Cuenta</p>
+                    <ul>
+                        {% if request.user.is_authenticated %}
+                            <li><a href="{% url 'perfil' request.user.username %}">Perfil</a></li>
+                            <li><a href="{% url 'ajustes' %}">Ajustes</a></li>
+                            <li><a href="{% url 'exit' %}">Cerrar sesión</a></li>
+                        {% else %}
+                            <li><a href="{% url 'account_login' %}">Entrar</a></li>
+                            <li><a href="{% url 'account_signup' %}">Crear cuenta</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% if 'acceder reportes' in permisos_usuario or 'gestionar categorias' in permisos_usuario or 'gestionar roles' in permisos_usuario %}
+                    <div class="footer-col">
+                        <p class="kicker">Equipo</p>
+                        <ul>
+                            {% if 'acceder reportes' in permisos_usuario %}
+                                <li><a href="{% url 'listaReportes' %}">Reportes</a></li>
+                            {% endif %}
+                            {% if 'gestionar categorias' in permisos_usuario %}
+                                <li><a href="{% url 'gestioncategoria' %}">Administrar categorías</a></li>
+                            {% endif %}
+                            {% if 'gestionar roles' in permisos_usuario %}
+                                <li><a href="{% url 'adicionrol' %}">Roles</a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
                 {% endif %}
-            </ul>
+            </nav>
+        </div>
+        <div class="footer-base">
+            <p>© {% now "Y" %} Journal X</p>
+            <a href="mailto:admin@journalx.com">admin@journalx.com</a>
         </div>
     </footer>
     <script src="{% static 'js/journalx.js' %}" defer></script>

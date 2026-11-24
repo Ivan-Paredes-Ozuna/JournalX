@@ -7,23 +7,22 @@
 <div class="settings">
 <div class="sidebar">
         <ul>
-            <li><a href="#Personal">PERSONAL</a></li>
-            <li><a href="#Seguridad">SEGURIDAD</a></li>
-            <li><a href="#Notificacion">NOTIFICACIÓN</a></li>
-            <li><a href="#Sesion">CERRAR SESIÓN</a></li>
+            <li><a href="#Personal">Datos</a></li>
+            <li><a href="#Seguridad">Seguridad</a></li>
+            <li><a href="#Notificacion">Correo</a></li>
+            <li><a href="#Sesion">Sesión</a></li>
         </ul>
     </div>
     <div class="main-content">
         
-        <!-- Detalles personales -->
-        <div class="form-section">
-            <h2 id="Personal">DETALLES PERSONALES</h2>
+        <div class="form-section is-on" id="panel-Personal">
+            <h2 id="Personal">Datos</h2>
 
             <form method="POST" enctype="multipart/form-data" >
                 {% csrf_token %}
                 {{ form_nombre_apellido.as_p }} 
                 <input type="hidden" name="form_type" value="nombre_apellido">
-                <button class="submit-btn" type="submit">GUARDAR</button>
+                <button class="submit-btn" type="submit">Guardar</button>
             </form>
             <br>
         
@@ -32,35 +31,35 @@
                 {{ form_foto_bio }}
 
                 <input type="hidden" name="form_type" value="foto_bio">
-                <button class="submit-btn" type="submit">GUARDAR</button>
+                <button class="submit-btn" type="submit">Guardar</button>
             </form>
         </div>
 
         <!-- Seguridad -->
-        <div class="form-section">
-            <h2 id="Seguridad">SEGURIDAD</h2>
+        <div class="form-section" id="panel-Seguridad">
+            <h2 id="Seguridad">Seguridad</h2>
             <form method="POST" enctype="multipart/form-data" >
                 {% csrf_token %}
                 {{ form_nueva_contrasena.as_p }} 
                 <input type="hidden" name="form_type" value="contrasena">
-                <button class="submit-btn" type="submit">GUARDAR</button>
+                <button class="submit-btn" type="submit">Guardar</button>
             </form>
         </div>
 
         <!-- Notificacion -->
-        <div class="form-section">
-            <h2 id="Notificacion">Notificación</h2>
+        <div class="form-section" id="panel-Notificacion">
+            <h2 id="Notificacion">Correo</h2>
 
             <form method="POST" enctype="multipart/form-data" >
                 {% csrf_token %}
                 {{ form_nuevo_email.as_p }} 
                 <input type="hidden" name="form_type" value="email">
-                <button class="submit-btn" type="submit">GUARDAR</button>
+                <button class="submit-btn" type="submit">Guardar</button>
             </form>
             <br>
 
             <!-- Nuevo toggle switch para recibir notificaciones por correo -->
-            <div class="form-section">
+            <div>
                 <label for="toggle-notifications">Recibir notificaciones por correo:</label>
                 <label class="switch">
                     <input type="checkbox" id="toggle-notifications" name="recibir_notificaciones" checked>
@@ -71,13 +70,35 @@
         </div>
 
         <!-- Cerrar sesion -->
-         <div class="form-section">
+         <div class="form-section" id="panel-Sesion">
             <h2 id="Sesion">Sesión</h2>
-            <a class="btn-delete" href="{% url 'exit' %}">CERRAR SESION</a>
-            <a class="btn-delete" href="{% url 'eliminar_usuario' request.user.id %}" 
-            onclick="return confirm('¿Estás seguro que quieres eliminar tu cuenta?')">ELIMINAR CUENTA</a>
+            <a class="btn-delete" href="{% url 'exit' %}">Cerrar sesión</a>
+            <a class="btn-delete" href="{% url 'eliminar_usuario' request.user.id %}" data-undo="La cuenta se eliminará.">Eliminar cuenta</a>
          </div>
     </div>
 </div>
 
+<script>
+    function mostrarAjuste(id) {
+        document.querySelectorAll(".settings .main-content > .form-section").forEach(function (section) {
+            section.classList.toggle("is-on", section.id === "panel-" + id);
+        });
+        document.querySelectorAll(".settings .sidebar a").forEach(function (link) {
+            const on = link.getAttribute("href") === "#" + id;
+            if (on) link.setAttribute("aria-current", "true");
+            else link.removeAttribute("aria-current");
+        });
+    }
+    document.querySelectorAll(".settings .sidebar a").forEach(function (link) {
+        link.addEventListener("click", function (event) {
+            event.preventDefault();
+            const id = link.getAttribute("href").slice(1);
+            mostrarAjuste(id);
+            history.replaceState(null, "", "#" + id);
+        });
+    });
+    const conocidas = ["Personal", "Seguridad", "Notificacion", "Sesion"];
+    const pedido = (location.hash || "#Personal").slice(1);
+    mostrarAjuste(conocidas.indexOf(pedido) === -1 ? "Personal" : pedido);
+</script>
 {% endblock %}

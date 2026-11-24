@@ -547,6 +547,30 @@ def guardar_publicacion_ajax(request, publicacion_id):
         return JsonResponse({'ok': True, 'publicacion_id': publicacion.id, 'message': 'Guardado.'})
     return JsonResponse({'ok': False, 'message': 'Método no permitido.'}, status=405)
 
+
+@login_required
+@require_POST
+def enviar_a_revision(request, publicacion_id):
+    """
+    El autor manda su borrador a revisión sin pasar por el tablero.
+    """
+    publicacion = get_object_or_404(Publicacion, id=publicacion_id)
+    if publicacion.user_id != request.user.id:
+        return JsonResponse({'ok': False, 'message': 'Solo puedes enviar tus borradores.'}, status=403)
+    if publicacion.estado != 'borrador':
+        return JsonResponse({'ok': False, 'message': 'Este texto ya no está en borrador.'}, status=400)
+    estado_anterior = publicacion.estado
+    publicacion.estado = 'revision'
+    publicacion.save()
+    Historial.objects.create(
+        publicacion=publicacion,
+        usuario=request.user,
+        accion='cambio_estado',
+        estado_anterior=estado_anterior,
+        estado_nuevo='revision',
+    )
+    return JsonResponse({'ok': True, 'estado': 'revision', 'message': 'En revisión.'})
+
 @login_required
 def comentario(request, publicacion_id):
     """

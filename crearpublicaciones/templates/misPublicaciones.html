@@ -1,14 +1,14 @@
 {% extends 'encabezado.html' %}
 {% load custom_filters %}
 
-{% block title %}Mis publicaciones · Journal X{% endblock %}
+{% block title %}Mis textos · Journal X{% endblock %}
 
 {% block content %}
 <header class="page-head">
     <div>
         <p class="kicker">Tu trabajo</p>
-        <h1>Mis publicaciones</h1>
-        <p>El estado indica en qué punto está cada texto. Eliminar pide confirmación en la pantalla siguiente.</p>
+        <h1>Mis textos</h1>
+        <p>El estado dice en qué punto está cada uno. Eliminar se puede deshacer unos segundos.</p>
     </div>
 </header>
 
@@ -35,14 +35,14 @@
                         data-delete="{% url 'eliminar_publicacion' publicacion.id %}"
                         data-remove="article"
                         data-label="Eliminar"
-                        data-confirm="¿Eliminar «{{ publicacion.titulo }}»? No se puede deshacer.">Eliminar</button>
+                        data-label="Eliminar">Eliminar</button>
                 </div>
             </article>
         {% endfor %}
     </div>
 {% else %}
     <div class="empty">
-        <h2>Todavía no tienes publicaciones</h2>
+        <h2>Todavía no tienes textos</h2>
         <p>Si en el menú aparece Escribir, elige una categoría y guarda un borrador. Si no aparece, pide el permiso de crear contenido a la administración.</p>
         <p>Correo: <a href="mailto:admin@journalx.com">admin@journalx.com</a></p>
         <a class="btn" href="{% url 'home' %}">Volver al inicio</a>

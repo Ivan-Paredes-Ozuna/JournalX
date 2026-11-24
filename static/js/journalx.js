@@ -47,6 +47,24 @@
         if (deleteButton) {
             event.preventDefault();
             eliminarEnPagina(deleteButton);
+            return;
+        }
+        const undoLink = event.target.closest("[data-undo]");
+        if (undoLink) {
+            event.preventDefault();
+            cerrarDeshacer(true);
+            abrirDeshacer(undoLink.dataset.undo || "Se eliminará.", function () {}, function () {
+                const form = document.createElement("form");
+                form.method = "POST";
+                form.action = undoLink.href;
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "csrfmiddlewaretoken";
+                input.value = csrfToken();
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            });
         }
     });
 })();
@@ -64,6 +82,52 @@ function textoMeGusta(cantidad) {
     return cantidad === 1 ? "1 me gusta" : cantidad + " me gusta";
 }
 
+function ocupar(elemento) {
+    if (!elemento) {
+        return;
+    }
+    elemento.classList.add("is-busy");
+    elemento.setAttribute("aria-busy", "true");
+    if ("disabled" in elemento) {
+        elemento.disabled = true;
+    }
+}
+
+function liberar(elemento) {
+    if (!elemento) {
+        return;
+    }
+    elemento.classList.remove("is-busy");
+    elemento.removeAttribute("aria-busy");
+    if ("disabled" in elemento) {
+        elemento.disabled = false;
+    }
+}
+
+function esqueletoHistoria() {
+    const article = document.createElement("article");
+    article.className = "story skeleton-card";
+    article.setAttribute("aria-hidden", "true");
+    ["is-short", "is-title", "", "is-mid"].forEach(function (extra) {
+        const line = document.createElement("span");
+        line.className = "skeleton" + (extra ? " " + extra : "");
+        article.appendChild(line);
+    });
+    return article;
+}
+
+function esqueletoComentario() {
+    const article = document.createElement("article");
+    article.className = "comment skeleton-card";
+    article.setAttribute("aria-hidden", "true");
+    ["is-short", "", "is-mid"].forEach(function (extra) {
+        const line = document.createElement("span");
+        line.className = "skeleton" + (extra ? " " + extra : "");
+        article.appendChild(line);
+    });
+    return article;
+}
+
 function alternarMeGusta(button) {
     if (button.disabled) {
         return;
@@ -72,9 +136,10 @@ function alternarMeGusta(button) {
     const url = liked ? button.dataset.unlikeUrl : button.dataset.likeUrl;
     const count = document.getElementById("like-count");
     const status = document.getElementById("like-status");
-    button.disabled = true;
+    ocupar(button);
     if (status) {
-        status.textContent = liked ? "Quitando me gusta…" : "Guardando me gusta…";
+        status.textContent = "";
+        status.classList.remove("is-error", "is-ok");
     }
 
     fetch(url, {
@@ -111,55 +176,152 @@ function alternarMeGusta(button) {
             }
         })
         .finally(function () {
-            button.disabled = false;
+            liberar(button);
         });
 }
 
 function eliminarEnPagina(button) {
-    if (button.disabled) {
+    if (button.disabled || button.classList.contains("is-busy")) {
         return;
     }
-    const mensaje = button.dataset.confirm || "¿Eliminar? Esta acción no se puede deshacer.";
-    if (!window.confirm(mensaje)) {
+    const pieza = button.closest(button.dataset.remove || "[data-removable]");
+    if (!pieza || !pieza.parentNode) {
         return;
     }
-    button.disabled = true;
-    button.textContent = "Eliminando…";
-
-    fetch(button.dataset.delete, {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": csrfToken(),
-            "X-Requested-With": "fetch",
-            "Accept": "application/json"
+    const padre = pieza.parentNode;
+    const siguiente = pieza.nextSibling;
+    const url = button.dataset.delete;
+    const despues = button.dataset.after;
+    cerrarDeshacer(true);
+    pieza.remove();
+    abrirDeshacer("Se eliminó.", function () {
+        if (siguiente && siguiente.parentNode === padre) {
+            padre.insertBefore(pieza, siguiente);
+        } else {
+            padre.appendChild(pieza);
         }
-    })
-        .then(function (response) {
+    }, function () {
+        return fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken(),
+                "X-Requested-With": "fetch",
+                "Accept": "application/json"
+            },
+            keepalive: true
+        }).then(function (response) {
             return response.json().then(function (data) {
-                return { ok: response.ok, data: data };
+                if (!response.ok) {
+                    throw new Error(data.message || "No se pudo eliminar.");
+                }
+                if (despues) {
+                    const aviso = document.createElement("div");
+                    aviso.className = "notice";
+                    const titulo = document.createElement("h2");
+                    titulo.textContent = "Listo, se eliminó.";
+                    const parrafo = document.createElement("p");
+                    const link = document.createElement("a");
+                    link.href = despues;
+                    link.textContent = "Volver";
+                    parrafo.appendChild(link);
+                    aviso.append(titulo, parrafo);
+                    if (siguiente && siguiente.parentNode === padre) {
+                        padre.insertBefore(aviso, siguiente);
+                    } else if (padre) {
+                        padre.appendChild(aviso);
+                    }
+                }
             });
-        })
-        .then(function (result) {
-            if (!result.ok) {
-                throw new Error(result.data.message || "No se pudo eliminar.");
+        }).catch(function (error) {
+            if (siguiente && siguiente.parentNode === padre) {
+                padre.insertBefore(pieza, siguiente);
+            } else if (padre) {
+                padre.appendChild(pieza);
             }
-            const pieza = button.closest(button.dataset.remove || "[data-removable]");
-            if (button.dataset.after && pieza) {
-                const aviso = document.createElement("div");
-                aviso.className = "notice";
-                aviso.innerHTML = "<h2>Listo, se eliminó.</h2><p><a href=\"" + button.dataset.after + "\">Volver</a></p>";
-                pieza.replaceWith(aviso);
-                return;
-            }
-            if (pieza) {
-                pieza.remove();
-            }
-        })
-        .catch(function (error) {
-            button.disabled = false;
-            button.textContent = button.dataset.label || "Eliminar";
             window.alert(error.message || "No se pudo eliminar.");
         });
+    });
+}
+
+let deshacerTimer = null;
+let deshacerCerrar = null;
+
+function abrirDeshacer(mensaje, deshacer, confirmar) {
+    let barra = document.getElementById("undo-bar");
+    if (!barra) {
+        barra = document.createElement("div");
+        barra.id = "undo-bar";
+        barra.className = "undo-bar";
+        barra.setAttribute("role", "status");
+        const texto = document.createElement("p");
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "btn-ghost";
+        boton.textContent = "Deshacer";
+        barra.append(texto, boton);
+        document.body.appendChild(barra);
+    }
+    barra.hidden = false;
+    barra.querySelector("p").textContent = mensaje;
+    const boton = barra.querySelector("button");
+    deshacerCerrar = function (ejecutar) {
+        clearTimeout(deshacerTimer);
+        deshacerTimer = null;
+        barra.hidden = true;
+        if (ejecutar && confirmar) {
+            const accion = confirmar;
+            confirmar = null;
+            deshacer = null;
+            accion();
+        }
+    };
+    boton.onclick = function () {
+        clearTimeout(deshacerTimer);
+        deshacerTimer = null;
+        barra.hidden = true;
+        if (deshacer) deshacer();
+        deshacer = null;
+        confirmar = null;
+    };
+    deshacerTimer = setTimeout(function () {
+        if (deshacerCerrar) deshacerCerrar(true);
+    }, 5000);
+}
+
+function cerrarDeshacer(ejecutar) {
+    if (deshacerCerrar) deshacerCerrar(ejecutar);
+}
+
+window.addEventListener("pagehide", function () {
+    cerrarDeshacer(true);
+});
+
+function sincronizarFiltros(url) {
+    const campos = {
+        keyword: "keyword",
+        category: "categoria",
+        "date-from": "fecha",
+        autor: "autor"
+    };
+    let params;
+    try {
+        params = new URL(url, window.location.origin).searchParams;
+    } catch (error) {
+        return;
+    }
+    Object.keys(campos).forEach(function (nombre) {
+        const campo = document.getElementById(campos[nombre]);
+        if (campo) {
+            campo.value = params.get(nombre) || "";
+        }
+    });
+    const buscador = document.querySelector(".header-search [name=keyword]");
+    if (buscador) {
+        buscador.value = params.get("keyword") || "";
+    }
+    if (window.pintarFiltros) {
+        window.pintarFiltros();
+    }
 }
 
 function cargarResultados(url, push) {
@@ -169,14 +331,25 @@ function cargarResultados(url, push) {
         window.location.href = url;
         return;
     }
+    const turno = (resultados._turno || 0) + 1;
+    resultados._turno = turno;
     if (push !== false) {
         history.pushState(null, "", url);
     }
+    sincronizarFiltros(url);
+    if (!resultados.classList.contains("is-loading")) {
+        resultados.dataset.previous = resultados.innerHTML;
+    }
     resultados.classList.add("is-loading");
     resultados.setAttribute("aria-busy", "true");
+    resultados.replaceChildren();
+    const lista = document.createElement("div");
+    lista.className = "story-list";
+    lista.append(esqueletoHistoria(), esqueletoHistoria(), esqueletoHistoria());
+    resultados.appendChild(lista);
     if (aviso) {
-        aviso.textContent = "Buscando…";
-        aviso.classList.remove("is-error", "is-ok");
+        aviso.textContent = "";
+        aviso.classList.remove("is-error", "is-ok", "is-busy");
     }
     fetch(url, {
         headers: {
@@ -190,21 +363,35 @@ function cargarResultados(url, push) {
             });
         })
         .then(function (result) {
+            if (turno !== resultados._turno) {
+                return;
+            }
             if (!result.ok || !result.data.html) {
                 throw new Error((result.data && result.data.message) || "No se pudo actualizar la lista.");
             }
             resultados.innerHTML = result.data.html;
+            delete resultados.dataset.previous;
             if (aviso) {
                 aviso.textContent = "";
             }
         })
         .catch(function (error) {
+            if (turno !== resultados._turno) {
+                return;
+            }
+            if (resultados.dataset.previous) {
+                resultados.innerHTML = resultados.dataset.previous;
+                delete resultados.dataset.previous;
+            }
             if (aviso) {
                 aviso.textContent = error.message || "No se pudo actualizar la lista.";
                 aviso.classList.add("is-error");
             }
         })
         .finally(function () {
+            if (turno !== resultados._turno) {
+                return;
+            }
             resultados.classList.remove("is-loading");
             resultados.removeAttribute("aria-busy");
         });
@@ -215,11 +402,16 @@ function publicarComentario(form) {
     const button = form.querySelector("button[type=submit]");
     const lista = document.getElementById("comentario-lista");
     const vacio = document.getElementById("comentario-vacio");
-    if (button) {
-        button.disabled = true;
+    ocupar(button);
+    const espera = esqueletoComentario();
+    if (vacio) {
+        vacio.hidden = true;
+    }
+    if (lista) {
+        lista.prepend(espera);
     }
     if (status) {
-        status.textContent = "Publicando el comentario…";
+        status.textContent = "";
         status.classList.remove("is-error", "is-ok");
     }
     fetch(form.action, {
@@ -263,6 +455,7 @@ function publicarComentario(form) {
             remove.dataset.confirm = "¿Eliminar este comentario?";
             remove.textContent = "Eliminar comentario";
             article.append(title, when, body, remove);
+            espera.remove();
             if (vacio) {
                 vacio.remove();
             }
@@ -276,15 +469,17 @@ function publicarComentario(form) {
             }
         })
         .catch(function (error) {
+            espera.remove();
+            if (vacio) {
+                vacio.hidden = false;
+            }
             if (status) {
                 status.textContent = error.message || "No se pudo publicar el comentario.";
                 status.classList.add("is-error");
             }
         })
         .finally(function () {
-            if (button) {
-                button.disabled = false;
-            }
+            liberar(button);
         });
 }
 

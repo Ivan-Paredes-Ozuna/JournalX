@@ -26,6 +26,7 @@ urlpatterns = [
     path('dislikear/<int:publicacion_id>/', dislikear, name='dislikear'),
     path('modificar_publicacion_ajax/<int:id>/', modificar_publicacion_ajax, name='modificar_publicacion_ajax'),
     path('guardar_publicacion/<int:publicacion_id>/', guardar_publicacion_ajax, name='guardar_publicacion_ajax'),
+    path('enviar-revision/<int:publicacion_id>/', enviar_a_revision, name='enviar_a_revision'),
     path('incrementar-vistas/<int:publicacion_id>/', incrementar_vistas, name='incrementar_vistas'),
     
     path('historial/<int:publicacion_id>/', historial_publicacion, name='historial_publicacion'),

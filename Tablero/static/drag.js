@@ -12,7 +12,7 @@ function say(message, kind) {
         return;
     }
     status.textContent = message;
-    status.classList.remove("is-error", "is-ok");
+    status.classList.remove("is-error", "is-ok", "is-busy");
     if (kind) {
         status.classList.add(kind);
     }
@@ -37,7 +37,7 @@ function hideConfirm() {
 }
 
 function commit(task, newState, origin) {
-    say("Guardando el nuevo estado…");
+    say("Guardando", "is-busy");
     fetch("/Tablero/update_task_state/" + task.getAttribute("data-id") + "/", {
         method: "POST",
         headers: {

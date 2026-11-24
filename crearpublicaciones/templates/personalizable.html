@@ -6,26 +6,42 @@
 <div class="editor-page">
     <p class="kicker">Borrador · {{ categoria.descripcion_corta }}</p>
     <h1 contenteditable="true" id="title" data-placeholder="Escribe el título"></h1>
-    <p class="editor-help">Agrega bloques y arrástralos para ordenarlos. Al guardar, el texto queda en borrador.</p>
+    <p class="editor-help">Escribe el título y agrega un bloque. Guardar lo deja en borrador.</p>
 
     <div id="editor"></div>
 
-    <div class="controls">
-        <button type="button" onclick="addTextBlock()">Párrafo</button>
-        <button type="button" onclick="addImageBlock()">Imagen</button>
-        <button type="button" onclick="addHeadingBlock('H2')">Subtítulo</button>
-        <button type="button" onclick="addHeadingBlock('H3')">Apartado</button>
-        <button type="button" onclick="addBulletListBlock()">Lista</button>
-        <button type="button" onclick="addQuoteBlock()">Cita</button>
+    <button type="button" class="btn-ghost" id="add-block" aria-expanded="false" aria-controls="block-choices">Agregar bloque</button>
+    <div class="controls" id="block-choices" hidden>
+        <button type="button" onclick="elegirBloque(addTextBlock)">Párrafo</button>
+        <button type="button" onclick="elegirBloque(addImageBlock)">Imagen</button>
+        <button type="button" onclick="elegirBloque(addHeadingBlock, 'H2')">Subtítulo</button>
+        <button type="button" onclick="elegirBloque(addHeadingBlock, 'H3')">Apartado</button>
+        <button type="button" onclick="elegirBloque(addBulletListBlock)">Lista</button>
+        <button type="button" onclick="elegirBloque(addQuoteBlock)">Cita</button>
     </div>
 
     <button type="button" class="save-button" onclick="saveContent()">Guardar borrador</button>
+    <button type="button" class="btn" id="send-review" hidden>Enviar a revisión</button>
     <p id="editor-status" class="status" role="status"></p>
-    <p id="editor-next" hidden><a href="{% url 'mis_publicaciones' %}">Ver mis publicaciones</a></p>
+    <p id="editor-next" hidden><a href="{% url 'mis_publicaciones' %}">Ver mis textos</a></p>
 </div>
 
 <script>
-    // Inicializar Sortable para permitir arrastrar y soltar los bloques
+    function elegirBloque(accion, extra) {
+        if (extra) accion(extra);
+        else accion();
+        const panel = document.getElementById("block-choices");
+        const opener = document.getElementById("add-block");
+        panel.hidden = true;
+        opener.setAttribute("aria-expanded", "false");
+    }
+
+    document.getElementById("add-block").addEventListener("click", function () {
+        const panel = document.getElementById("block-choices");
+        const open = panel.hidden;
+        panel.hidden = !open;
+        this.setAttribute("aria-expanded", open ? "true" : "false");
+    });
     const editor = document.getElementById('editor');
     Sortable.create(editor, {
         animation: 150,
@@ -120,9 +136,10 @@
             setStatus('Agrega al menos un párrafo antes de guardar.', 'is-error');
             return;
         }
+        saveButton.classList.add('is-busy');
+        saveButton.setAttribute('aria-busy', 'true');
         saveButton.disabled = true;
-        saveButton.textContent = 'Guardando…';
-        setStatus('Guardando el borrador…');
+        setStatus('');
         const categoriaId = {{ categoria.id }};
         const blocks = editor.children;
         let contentHTML = '';
@@ -197,16 +214,52 @@
             if (!response.ok || body.ok === false) {
                 throw new Error(body.message || 'No se pudo guardar. Inténtalo otra vez.');
             }
-            setStatus('Guardado. Puedes seguir editando.', 'is-ok');
+            setStatus('Guardado. Puedes enviarlo a revisión.', 'is-ok');
             const next = document.getElementById('editor-next');
             if (next) next.hidden = false;
+            const send = document.getElementById('send-review');
+            if (send) send.hidden = false;
+            saveButton.classList.remove('is-busy');
+            saveButton.removeAttribute('aria-busy');
             saveButton.disabled = false;
-            saveButton.textContent = 'Guardar borrador';
         })).catch(error => {
+            saveButton.classList.remove('is-busy');
+            saveButton.removeAttribute('aria-busy');
             saveButton.disabled = false;
-            saveButton.textContent = 'Guardar borrador';
             setStatus(error.message || 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.', 'is-error');
         });
     }
+
+    document.getElementById("send-review").addEventListener("click", function () {
+        if (!publicacionId || this.disabled) return;
+        const button = this;
+        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        const token = match ? decodeURIComponent(match[1]) : "";
+        button.classList.add("is-busy");
+        button.setAttribute("aria-busy", "true");
+        button.disabled = true;
+        setStatus("");
+        fetch("{% url 'enviar_a_revision' 0 %}".replace("0", publicacionId), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": token,
+                "X-Requested-With": "fetch",
+                "Accept": "application/json"
+            }
+        }).then(function (response) {
+            return response.json().then(function (body) {
+                if (!response.ok || body.ok === false) {
+                    throw new Error(body.message || "No se pudo enviar.");
+                }
+                setStatus("En revisión.", "is-ok");
+                button.hidden = true;
+            });
+        }).catch(function (error) {
+            button.classList.remove("is-busy");
+            button.removeAttribute("aria-busy");
+            button.disabled = false;
+            setStatus(error.message || "No se pudo enviar.", "is-error");
+        });
+    });
 </script>
 {% endblock %}

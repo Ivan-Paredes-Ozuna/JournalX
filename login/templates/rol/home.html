@@ -6,15 +6,16 @@
 {% block content %}
 <header class="page-head">
     <div>
-        <p class="kicker">Publicaciones</p>
+        <p class="kicker">Textos</p>
         <h1>Inicio</h1>
-        <p>Textos publicados. Abre uno para leerlo completo.</p>
+        <p>Abre un texto para leerlo completo.</p>
     </div>
     <button type="button" class="btn-ghost" id="filter-toggle" aria-expanded="{% if keyword or categoria or fecha or autor %}true{% else %}false{% endif %}" aria-controls="filtros">Filtrar</button>
 </header>
 
+<div class="chips" id="filter-summary" aria-live="polite"></div>
+
 <section id="filtros" class="filters {% if keyword or categoria or fecha or autor %}is-open{% endif %}">
-    <div class="chips" id="filter-summary" aria-live="polite"></div>
     <form id="search-filters" action="{% url 'search' %}" method="get">
         <div class="filter-grid">
             <div>
@@ -66,39 +67,39 @@
 
     function removeFilter(id) {
         document.getElementById(id).value = "";
-        updateSelectedFilters();
+        window.pintarFiltros();
+        document.getElementById("search-filters").requestSubmit();
     }
 
-    function updateSelectedFilters() {
+    window.pintarFiltros = function () {
         const keyword = document.getElementById("keyword").value;
         const categoria = document.getElementById("categoria").value;
         const fecha = document.getElementById("fecha").value;
         const autor = document.getElementById("autor").value;
         const summary = document.getElementById("filter-summary");
-        summary.innerHTML = "";
+        summary.replaceChildren();
         const items = [];
-        if (keyword) items.push(["keyword", "Palabra: " + keyword]);
-        if (categoria) items.push(["categoria", "Categoría: " + categoria]);
-        if (fecha) items.push(["fecha", "Desde: " + fecha]);
-        if (autor) items.push(["autor", "Autor: " + autor]);
+        if (keyword) items.push(["keyword", keyword]);
+        if (categoria) items.push(["categoria", categoria]);
+        if (fecha) items.push(["fecha", "Desde " + fecha]);
+        if (autor) items.push(["autor", autor]);
         items.forEach(function (item) {
             const chip = document.createElement("span");
             chip.className = "chip";
             chip.append(document.createTextNode(item[1]));
             const button = document.createElement("button");
             button.type = "button";
-            button.setAttribute("aria-label", "Quitar filtro");
+            button.setAttribute("aria-label", "Quitar " + item[1]);
             button.textContent = "×";
             button.addEventListener("click", function () { removeFilter(item[0]); });
             chip.append(button);
             summary.append(chip);
         });
-    }
+    };
 
     document.querySelectorAll("#search-filters input, #search-filters select").forEach(function (item) {
-        item.addEventListener("input", updateSelectedFilters);
-        item.addEventListener("change", updateSelectedFilters);
+        item.addEventListener("change", window.pintarFiltros);
     });
-    updateSelectedFilters();
+    window.pintarFiltros();
 </script>
 {% endblock %}

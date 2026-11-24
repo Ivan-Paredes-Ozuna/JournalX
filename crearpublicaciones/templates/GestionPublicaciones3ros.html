@@ -2,7 +2,7 @@
 
 {% block content%}
 
-    <h1>Gestion de Publicaciones de {{categoria_nombre}}</h1>
+    <h1>Textos de {{categoria_nombre}}</h1>
     <div class="container">
         {% if publicaciones %}
             <ul class="publicacion-list">
@@ -25,7 +25,7 @@
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="no-publicaciones">No tienes publicaciones aún.</p>
+            <p class="no-publicaciones">No hay textos aquí.</p>
         {% endif %}
         <div class="back-to-home">
             <a href="{% url 'home' %}">Inicio</a>
