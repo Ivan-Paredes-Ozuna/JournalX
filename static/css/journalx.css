@@ -259,6 +259,15 @@ a.brand:hover {
     border-right: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
     transform: translateY(-2px) rotate(45deg);
+    transition: transform 220ms var(--ease-out);
+}
+
+.menu[open] summary::after {
+    transform: translateY(1px) rotate(225deg);
+}
+
+.menu::details-content {
+    transition: content-visibility 220ms allow-discrete, overlay 220ms allow-discrete;
 }
 
 .menu-panel {
@@ -279,13 +288,25 @@ a.brand:hover {
     gap: 2px;
     z-index: 40;
     transform-origin: top left;
-    transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+.menu[open] .menu-panel {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.menu.is-closing .menu-panel {
+    opacity: 0;
+    transform: translateY(-8px);
 }
 
 @starting-style {
     .menu[open] .menu-panel {
         opacity: 0;
-        transform: scale(0.96);
+        transform: translateY(-8px);
     }
 }
 
@@ -1409,14 +1430,23 @@ button.like.is-busy::after {
     margin-inline: auto;
 }
 
+.editor-page .editor-help {
+    max-width: 52ch;
+    margin: 0 0 22px;
+    color: var(--muted);
+}
+
 .editor-page #title {
-    min-height: 64px;
-    margin-bottom: 8px;
-    padding: 12px 14px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--sunken);
-    font-size: clamp(1.45rem, 4vw, 2rem);
+    min-height: 1.2em;
+    margin: 0 0 8px;
+    padding: 2px 2px 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: clamp(1.85rem, 4vw, 2.45rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
     overflow-wrap: anywhere;
 }
 
@@ -1425,39 +1455,146 @@ button.like.is-busy::after {
     color: var(--faint);
 }
 
-.editor-page .block {
-    position: relative;
-    min-height: 40px;
-    margin-bottom: 10px;
-    padding: 10px 40px 10px 10px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
+.doc-bar {
+    position: sticky;
+    top: 8rem;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0 0 12px;
+    padding: 6px;
     background: var(--raised);
-    cursor: move;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
-.editor-page .block textarea,
-.editor-page .block input {
-    width: 100%;
-    min-height: 72px;
-    padding: 10px;
+.doc-bar button {
+    position: relative;
+    min-height: 36px;
+    padding: 6px 10px;
     border: 0;
+    border-radius: 8px;
     background: transparent;
+    color: var(--muted);
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.doc-bar button[aria-pressed="true"] {
+    background: var(--bg);
     color: var(--text);
-    font: inherit;
-    font-size: 1rem;
-    resize: vertical;
+    box-shadow: inset 0 -2px 0 var(--accent);
 }
 
-.editor-page .controls {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin: 8px 0 16px;
+@media (hover: hover) and (pointer: fine) {
+    .doc-bar button:hover {
+        background: var(--bg);
+        color: var(--text);
+    }
 }
 
-.editor-page .controls[hidden] {
+.doc {
+    min-height: 320px;
+    padding: 4px 2px 8px;
+    outline: none;
+    font-size: 1.125rem;
+    line-height: 1.7;
+}
+
+.doc > p,
+.doc > h2,
+.doc > h3,
+.doc > blockquote,
+.doc li {
+    max-width: var(--measure);
+    margin: 0 0 0.8em;
+}
+
+.doc > h2 {
+    font-size: 1.6rem;
+    line-height: 1.25;
+    margin-top: 1.15em;
+}
+
+.doc > h3 {
+    font-size: 1.28rem;
+    line-height: 1.3;
+    margin-top: 1em;
+}
+
+.doc > blockquote {
+    margin-left: 0;
+    padding-left: 14px;
+    border-left: 3px solid var(--accent);
+    color: var(--muted);
+    font-style: italic;
+}
+
+.doc ul {
+    margin: 0 0 0.8em;
+    padding-left: 1.3rem;
+}
+
+.doc > p:only-child:empty::before,
+.doc > p:only-child:has(> br:only-child)::before {
+    content: "Empieza a escribir…";
+    color: var(--faint);
+}
+
+.doc > p:only-child > br:only-child {
     display: none;
+}
+
+.doc-figure {
+    position: relative;
+    width: min(100%, var(--measure));
+    margin: 0 0 0.9em;
+}
+
+.doc-figure img {
+    display: block;
+    width: 100%;
+    border-radius: 12px;
+}
+
+.doc-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(18, 19, 20, 0.72);
+    color: #fff;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .doc-remove:hover {
+        background: var(--danger);
+        color: #fff;
+    }
+}
+
+.doc .is-new {
+    animation: doc-in 200ms var(--ease-out);
+}
+
+@keyframes doc-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .undo-bar {
@@ -1487,66 +1624,23 @@ button.like.is-busy::after {
     margin: 0;
 }
 
-.editor-page .controls button,
-.editor-page .save-button {
-    min-height: 44px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    font: inherit;
+.editor-page .save-button,
+.editor-page #send-review {
+    width: 100%;
+    margin-top: 18px;
 }
 
-.editor-page .controls button {
-    width: 100%;
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--line);
+.editor-page #send-review {
+    margin-top: 8px;
 }
 
 .editor-page .save-button {
-    width: 100%;
     border: 0;
+    border-radius: 12px;
+    min-height: 48px;
     background: var(--accent);
     color: #fff;
     font-weight: 700;
-}
-
-.editor-page .delete-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 22px;
-    height: 22px;
-    border: 0;
-    border-radius: 4px;
-    background: var(--danger);
-    color: #fff;
-    cursor: pointer;
-}
-
-.editor-page .resizable {
-    display: inline-block;
-    max-width: 100%;
-    resize: both;
-    overflow: auto;
-}
-
-.editor-page .resizable img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.editor-page .quote-block {
-    font-style: italic;
-    padding-left: 10px;
-    border-left: 4px solid var(--accent);
-    color: var(--text);
-    background: var(--sunken);
-}
-
-.editor-page .sortable-ghost {
-    opacity: 0.5;
 }
 
 .article-container,
@@ -1639,19 +1733,92 @@ button.like.is-busy::after {
         font-size: 30px;
     }
 
-    .editor-page .controls {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .editor-page .block {
-        padding-right: 36px;
-    }
-
     .header-search input,
     .header-search button,
     .nav-toggle {
         min-height: 44px;
     }
+}
+
+.warm-fuse {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 5px;
+    height: 2px;
+    border-radius: 1px;
+    background: #f4f4f5;
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
+}
+
+.warm-fuse[data-fuse="arming"] {
+    opacity: 1;
+    transform: scaleX(1);
+    transition: transform 400ms linear, opacity 80ms var(--ease-out);
+}
+
+.warm-tip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 80;
+    pointer-events: none;
+    transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out);
+}
+
+.warm-tip[hidden] {
+    display: none;
+}
+
+.warm-tip-box {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f4f4f5;
+    color: #18181b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 8px 24px -8px rgba(0, 0, 0, 0.45);
+    transform: translateY(6px) scale(0.94);
+    opacity: 0;
+    filter: blur(3px);
+    transition: transform 180ms var(--ease-out), opacity 180ms var(--ease-out), filter 180ms var(--ease-out);
+}
+
+.warm-tip.is-in .warm-tip-box {
+    transform: none;
+    opacity: 1;
+    filter: none;
+}
+
+.warm-tip-text {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    transition: opacity 140ms var(--ease-out);
+}
+
+.warm-tip-arrow {
+    position: absolute;
+    bottom: -3px;
+    width: 8px;
+    height: 8px;
+    margin-left: -4px;
+    border-radius: 2px;
+    background: #f4f4f5;
+    transform: rotate(45deg);
+}
+
+.warm-tip[data-side="bottom"] .warm-tip-arrow {
+    bottom: auto;
+    top: -3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1698,7 +1865,29 @@ button.like.is-busy::after {
     .site-nav a:active,
     .menu-panel a:active,
     .menu[open] .menu-panel,
+    .menu.is-closing .menu-panel,
     .board-confirm {
         transform: none;
+    }
+
+    .doc .is-new {
+        animation: none;
+        transform: none;
+    }
+
+    .warm-tip,
+    .warm-tip-text {
+        transition: none;
+    }
+
+    .warm-tip-box {
+        transform: none;
+        filter: none;
+        opacity: 1;
+        transition: none;
+    }
+
+    .warm-fuse {
+        display: none;
     }
 }

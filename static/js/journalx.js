@@ -9,10 +9,29 @@
         });
     }
 
+    document.querySelectorAll("details.menu").forEach(function (menu) {
+        const summary = menu.querySelector("summary");
+        if (!summary) {
+            return;
+        }
+        summary.addEventListener("click", function (event) {
+            if (menu.classList.contains("is-closing")) {
+                event.preventDefault();
+                menu.classList.remove("is-closing");
+                return;
+            }
+            if (!menu.open) {
+                return;
+            }
+            event.preventDefault();
+            closeMenu(menu);
+        });
+    });
+
     document.addEventListener("click", function (event) {
         document.querySelectorAll("details.menu[open]").forEach(function (menu) {
             if (!menu.contains(event.target)) {
-                menu.removeAttribute("open");
+                closeMenu(menu);
             }
         });
     });
@@ -22,7 +41,7 @@
             return;
         }
         document.querySelectorAll("details.menu[open]").forEach(function (menu) {
-            menu.removeAttribute("open");
+            closeMenu(menu);
         });
         if (header) {
             header.classList.remove("is-open");
@@ -68,6 +87,38 @@
         }
     });
 })();
+
+function closeMenu(menu) {
+    if (!menu.open) {
+        return;
+    }
+    const panel = menu.querySelector(".menu-panel");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!panel || reduce) {
+        menu.classList.remove("is-closing");
+        menu.removeAttribute("open");
+        return;
+    }
+    if (menu.classList.contains("is-closing")) {
+        return;
+    }
+    menu.classList.add("is-closing");
+    const finish = function () {
+        if (!menu.classList.contains("is-closing")) {
+            return;
+        }
+        menu.classList.remove("is-closing");
+        menu.removeAttribute("open");
+    };
+    panel.addEventListener("transitionend", function done(event) {
+        if (event.target !== panel) {
+            return;
+        }
+        panel.removeEventListener("transitionend", done);
+        finish();
+    });
+    window.setTimeout(finish, 280);
+}
 
 function csrfToken() {
     const input = document.querySelector("[name=csrfmiddlewaretoken]");
@@ -530,11 +581,182 @@ function publicarComentario(form) {
         });
     }
 
+    iniciarTooltips();
+
     const commentForm = document.getElementById("comment-form");
     if (commentForm) {
         commentForm.addEventListener("submit", function (event) {
             event.preventDefault();
             publicarComentario(commentForm);
+        });
+    }
+
+    function iniciarTooltips() {
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+        if (!fine) return;
+        document.querySelectorAll("[data-warm-group]").forEach(function (group) {
+            const buttons = group.querySelectorAll("[data-tip]");
+            if (!buttons.length) return;
+            const tip = document.createElement("div");
+            tip.className = "warm-tip";
+            tip.setAttribute("role", "tooltip");
+            tip.hidden = true;
+            tip.innerHTML = '<div class="warm-tip-box"><span class="warm-tip-text"></span><span class="warm-tip-arrow" aria-hidden="true"></span></div>';
+            document.body.appendChild(tip);
+            const text = tip.querySelector(".warm-tip-text");
+            const arrow = tip.querySelector(".warm-tip-arrow");
+            let current = null;
+            let fuse = null;
+            let openTimer = 0;
+            let closeTimer = 0;
+            let warmUntil = 0;
+
+            function buttonOf(node) {
+                if (!node || !node.closest) return null;
+                const button = node.closest("[data-tip]");
+                return button && group.contains(button) ? button : null;
+            }
+
+            function isWarm() {
+                return (current && !tip.hidden) || performance.now() < warmUntil;
+            }
+
+            function clearFuse() {
+                if (!fuse) return;
+                fuse.remove();
+                fuse = null;
+            }
+
+            function place(button, travel) {
+                tip.hidden = false;
+                if (!travel) tip.style.transition = "none";
+                const width = Math.ceil(text.scrollWidth + 20);
+                const height = Math.ceil(text.offsetHeight + 12);
+                const rect = button.getBoundingClientRect();
+                let x = rect.left + rect.width / 2 - width / 2;
+                let y = rect.top - height - 10;
+                x = Math.max(8, Math.min(x, window.innerWidth - width - 8));
+                let side = "top";
+                if (y < 8) {
+                    y = rect.bottom + 10;
+                    side = "bottom";
+                }
+                tip.dataset.side = side;
+                tip.style.width = width + "px";
+                tip.style.height = height + "px";
+                tip.style.transform = "translate(" + x + "px, " + y + "px)";
+                const center = rect.left + rect.width / 2 - x;
+                arrow.style.left = Math.max(12, Math.min(center, width - 12)) + "px";
+                if (!travel) {
+                    tip.offsetHeight;
+                    tip.style.transition = "";
+                }
+            }
+
+            function show(button, travel) {
+                window.clearTimeout(openTimer);
+                window.clearTimeout(closeTimer);
+                clearFuse();
+                const label = button.getAttribute("data-tip") || "";
+                if (travel && text.textContent !== label) text.style.opacity = "0";
+                text.textContent = label;
+                const moving = travel && current && current !== button && !tip.hidden;
+                current = button;
+                place(button, moving && !reduce);
+                tip.classList.add("is-in");
+                tip.id = "warm-tip";
+                button.setAttribute("aria-describedby", "warm-tip");
+                if (text.style.opacity === "0") {
+                    window.requestAnimationFrame(function () {
+                        text.style.opacity = "1";
+                    });
+                }
+            }
+
+            function hide(instant) {
+                window.clearTimeout(openTimer);
+                window.clearTimeout(closeTimer);
+                clearFuse();
+                if (!current) return;
+                const closing = current;
+                warmUntil = performance.now() + 300;
+                closing.removeAttribute("aria-describedby");
+                if (instant || reduce) {
+                    tip.classList.remove("is-in");
+                    tip.hidden = true;
+                    current = null;
+                    return;
+                }
+                tip.classList.remove("is-in");
+                closeTimer = window.setTimeout(function () {
+                    if (current !== closing) return;
+                    tip.hidden = true;
+                    current = null;
+                }, 180);
+            }
+
+            function arm(button) {
+                if (current === button && !tip.hidden && tip.classList.contains("is-in")) return;
+                window.clearTimeout(openTimer);
+                window.clearTimeout(closeTimer);
+                if (isWarm()) {
+                    show(button, true);
+                    return;
+                }
+                clearFuse();
+                if (!reduce) {
+                    fuse = document.createElement("span");
+                    fuse.className = "warm-fuse";
+                    fuse.setAttribute("aria-hidden", "true");
+                    button.appendChild(fuse);
+                    window.requestAnimationFrame(function () {
+                        window.requestAnimationFrame(function () {
+                            if (fuse) fuse.dataset.fuse = "arming";
+                        });
+                    });
+                }
+                openTimer = window.setTimeout(function () {
+                    show(button, false);
+                }, reduce ? 0 : 400);
+            }
+
+            group.addEventListener("pointerover", function (event) {
+                const button = buttonOf(event.target);
+                if (!button || buttonOf(event.relatedTarget) === button) return;
+                arm(button);
+            });
+
+            group.addEventListener("pointerout", function (event) {
+                const button = buttonOf(event.target);
+                if (!button || buttonOf(event.relatedTarget) === button) return;
+                window.clearTimeout(openTimer);
+                clearFuse();
+                if (buttonOf(event.relatedTarget)) return;
+                hide(false);
+            });
+
+            group.addEventListener("focusin", function (event) {
+                const button = buttonOf(event.target);
+                if (button) arm(button);
+            });
+
+            group.addEventListener("focusout", function (event) {
+                if (!buttonOf(event.target) || buttonOf(event.relatedTarget)) return;
+                hide(false);
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") hide(true);
+            });
+
+            window.addEventListener("scroll", function () {
+                if (current && !tip.hidden) place(current, false);
+            }, true);
+
+            window.addEventListener("resize", function () {
+                if (current && !tip.hidden) place(current, false);
+            });
         });
     }
 })();

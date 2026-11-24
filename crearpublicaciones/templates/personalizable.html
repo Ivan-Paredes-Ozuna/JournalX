@@ -1,24 +1,22 @@
 {% extends 'encabezado.html' %}
 
 {% block content %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
-
 <div class="editor-page">
     <p class="kicker">Borrador · {{ categoria.descripcion_corta }}</p>
     <h1 contenteditable="true" id="title" data-placeholder="Escribe el título"></h1>
-    <p class="editor-help">Escribe el título y agrega un bloque. Guardar lo deja en borrador.</p>
+    <p class="editor-help">Escribe seguido. Enter abre otro párrafo. La barra cambia el formato donde está el cursor.</p>
 
-    <div id="editor"></div>
-
-    <button type="button" class="btn-ghost" id="add-block" aria-expanded="false" aria-controls="block-choices">Agregar bloque</button>
-    <div class="controls" id="block-choices" hidden>
-        <button type="button" onclick="elegirBloque(addTextBlock)">Párrafo</button>
-        <button type="button" onclick="elegirBloque(addImageBlock)">Imagen</button>
-        <button type="button" onclick="elegirBloque(addHeadingBlock, 'H2')">Subtítulo</button>
-        <button type="button" onclick="elegirBloque(addHeadingBlock, 'H3')">Apartado</button>
-        <button type="button" onclick="elegirBloque(addBulletListBlock)">Lista</button>
-        <button type="button" onclick="elegirBloque(addQuoteBlock)">Cita</button>
+    <div class="doc-bar" role="toolbar" aria-label="Formato" data-warm-group>
+        <button type="button" data-format="p" data-tip="Texto normal" aria-pressed="false">Párrafo</button>
+        <button type="button" data-format="h2" data-tip="Título de sección" aria-pressed="false">Subtítulo</button>
+        <button type="button" data-format="h3" data-tip="Título menor" aria-pressed="false">Apartado</button>
+        <button type="button" data-format="ul" data-tip="Lista con viñetas" aria-pressed="false">Lista</button>
+        <button type="button" data-format="blockquote" data-tip="Frase destacada" aria-pressed="false">Cita</button>
+        <button type="button" data-format="img" data-tip="Insertar una foto">Imagen</button>
+        <input id="doc-image" type="file" accept="image/*" hidden>
     </div>
+
+    <div id="editor" class="doc" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Texto"></div>
 
     <button type="button" class="save-button" onclick="saveContent()">Guardar borrador</button>
     <button type="button" class="btn" id="send-review" hidden>Enviar a revisión</button>
@@ -27,92 +25,403 @@
 </div>
 
 <script>
-    function elegirBloque(accion, extra) {
-        if (extra) accion(extra);
-        else accion();
-        const panel = document.getElementById("block-choices");
-        const opener = document.getElementById("add-block");
-        panel.hidden = true;
-        opener.setAttribute("aria-expanded", "false");
+    const editor = document.getElementById("editor");
+    const imageInput = document.getElementById("doc-image");
+    const toolbar = document.querySelector(".doc-bar");
+    const header = document.querySelector(".site-header");
+
+    function pinToolbar() {
+        if (!header || !toolbar) return;
+        toolbar.style.top = (header.offsetHeight + 8) + "px";
+    }
+    pinToolbar();
+    if (header && "ResizeObserver" in window) new ResizeObserver(pinToolbar).observe(header);
+    const firstLine = document.createElement("p");
+    editor.appendChild(firstLine);
+
+    function textOf(node) {
+        return (node.innerText || "").replace(/\u00a0/g, " ").replace(/\n+/g, " ").trim();
     }
 
-    document.getElementById("add-block").addEventListener("click", function () {
-        const panel = document.getElementById("block-choices");
-        const open = panel.hidden;
-        panel.hidden = !open;
-        this.setAttribute("aria-expanded", open ? "true" : "false");
+    function placeCaret(node, atEnd) {
+        if (!node.firstChild) node.appendChild(document.createElement("br"));
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        range.collapse(!atEnd);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
+    function placeCaretOffset(node, offset) {
+        if (!node.firstChild) node.appendChild(document.createTextNode(""));
+        const text = node.firstChild;
+        const range = document.createRange();
+        range.setStart(text, Math.max(0, Math.min(offset, text.textContent.length)));
+        range.collapse(true);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
+    function fade(node) {
+        node.classList.add("is-new");
+        node.addEventListener("animationend", function done() {
+            node.classList.remove("is-new");
+        }, { once: true });
+    }
+
+    function currentUnit() {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return null;
+        let node = selection.anchorNode;
+        if (!node || !editor.contains(node)) return null;
+        if (node === editor) return editor.firstElementChild;
+        if (node.nodeType === 3) node = node.parentElement;
+        const item = node.closest("li");
+        if (item && editor.contains(item)) return item;
+        const figure = node.closest(".doc-figure");
+        if (figure && editor.contains(figure)) return figure;
+        while (node.parentElement && node.parentElement !== editor) node = node.parentElement;
+        return node === editor ? null : node;
+    }
+
+    function topBlock() {
+        const unit = currentUnit();
+        if (!unit) return null;
+        return unit.tagName === "LI" ? unit.parentElement : unit;
+    }
+
+    function caretAtStart(node) {
+        const selection = window.getSelection();
+        if (!selection.isCollapsed || !selection.rangeCount) return false;
+        const range = selection.getRangeAt(0);
+        if (!node.contains(range.startContainer)) return false;
+        const probe = range.cloneRange();
+        probe.selectNodeContents(node);
+        probe.setEnd(range.startContainer, range.startOffset);
+        return probe.toString().length === 0;
+    }
+
+    function splitText(block) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return "";
+        const range = selection.getRangeAt(0);
+        if (!block.contains(range.startContainer)) return "";
+        const tailRange = range.cloneRange();
+        tailRange.selectNodeContents(block);
+        tailRange.setStart(range.endContainer, range.endOffset);
+        const tail = tailRange.toString();
+        range.setEnd(tailRange.endContainer, tailRange.endOffset);
+        range.deleteContents();
+        block.textContent = block.textContent;
+        return tail;
+    }
+
+    function markToolbar() {
+        const top = topBlock();
+        const name = top ? top.tagName : "";
+        document.querySelectorAll(".doc-bar [data-format]").forEach(function (button) {
+            const format = button.dataset.format;
+            const on = (format === "p" && name === "P")
+                || (format === "h2" && name === "H2")
+                || (format === "h3" && name === "H3")
+                || (format === "ul" && name === "UL")
+                || (format === "blockquote" && name === "BLOCKQUOTE");
+            button.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+    }
+
+    function applyFormat(kind) {
+        if (kind === "img") {
+            const selection = window.getSelection();
+            imageInput.savedRange = selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+            imageInput.click();
+            return;
+        }
+        let top = topBlock();
+        if (!top || !editor.contains(top)) {
+            top = editor.querySelector("p, h2, h3, blockquote, ul");
+            if (!top) {
+                top = document.createElement("p");
+                editor.appendChild(top);
+            }
+            placeCaret(top.tagName === "UL" ? (top.querySelector("li") || top) : top, true);
+        }
+        if (top.classList.contains("doc-figure")) return;
+        if (kind === "ul") {
+            if (top.tagName === "UL") return;
+            const ul = document.createElement("ul");
+            const li = document.createElement("li");
+            li.textContent = textOf(top);
+            ul.appendChild(li);
+            top.replaceWith(ul);
+            placeCaret(li, true);
+            markToolbar();
+            return;
+        }
+        if (top.tagName === "UL") {
+            const items = Array.from(top.children);
+            let first = null;
+            const fragment = document.createDocumentFragment();
+            items.forEach(function (item) {
+                const el = document.createElement(kind);
+                el.textContent = textOf(item);
+                if (!first) first = el;
+                fragment.appendChild(el);
+            });
+            if (!first) {
+                first = document.createElement(kind);
+                fragment.appendChild(first);
+            }
+            top.replaceWith(fragment);
+            placeCaret(first, true);
+            markToolbar();
+            return;
+        }
+        if (top.tagName.toLowerCase() === kind) return;
+        const next = document.createElement(kind);
+        next.textContent = textOf(top);
+        top.replaceWith(next);
+        placeCaret(next, true);
+        markToolbar();
+    }
+
+    function insertBreak() {
+        const unit = currentUnit();
+        if (!unit) {
+            const line = document.createElement("p");
+            editor.appendChild(line);
+            fade(line);
+            placeCaret(line, false);
+            return;
+        }
+        if (unit.classList.contains("doc-figure")) {
+            const line = document.createElement("p");
+            unit.after(line);
+            fade(line);
+            placeCaret(line, false);
+            return;
+        }
+        if (unit.tagName === "LI") {
+            const list = unit.parentElement;
+            if (!textOf(unit)) {
+                const line = document.createElement("p");
+                if (list.children.length === 1) list.replaceWith(line);
+                else {
+                    unit.remove();
+                    list.after(line);
+                }
+                fade(line);
+                placeCaret(line, false);
+                markToolbar();
+                return;
+            }
+            const tail = splitText(unit);
+            const item = document.createElement("li");
+            item.textContent = tail;
+            unit.after(item);
+            fade(item);
+            placeCaret(item, false);
+            return;
+        }
+        if (!textOf(unit) && unit.tagName !== "P") {
+            const line = document.createElement("p");
+            unit.replaceWith(line);
+            placeCaret(line, false);
+            markToolbar();
+            return;
+        }
+        const tail = splitText(unit);
+        const line = document.createElement("p");
+        line.textContent = tail;
+        unit.after(line);
+        fade(line);
+        placeCaret(line, false);
+        markToolbar();
+    }
+
+    function previousUnit(unit) {
+        if (unit.tagName === "LI" && unit.previousElementSibling) return unit.previousElementSibling;
+        const top = unit.tagName === "LI" ? unit.parentElement : unit;
+        return top.previousElementSibling;
+    }
+
+    function mergeBackward(event) {
+        const unit = currentUnit();
+        if (!unit || unit.classList.contains("doc-figure")) return;
+        const selection = window.getSelection();
+        if (!selection.isCollapsed || !caretAtStart(unit)) return;
+        const previous = previousUnit(unit);
+        if (!previous && !textOf(unit)) {
+            event.preventDefault();
+            return;
+        }
+        if (!previous) return;
+        event.preventDefault();
+        if (previous.classList.contains("doc-figure")) {
+            previous.remove();
+            return;
+        }
+        const incoming = textOf(unit);
+        const destination = previous.tagName === "UL" ? previous.lastElementChild : previous;
+        const join = textOf(destination).length;
+        destination.textContent = textOf(destination) + incoming;
+        if (unit.tagName === "LI") {
+            const list = unit.parentElement;
+            unit.remove();
+            if (!list.children.length) list.remove();
+        } else {
+            unit.remove();
+        }
+        if (!editor.firstElementChild) editor.appendChild(document.createElement("p"));
+        placeCaretOffset(destination, join);
+        markToolbar();
+    }
+
+    document.querySelector(".doc-bar").addEventListener("mousedown", function (event) {
+        if (event.target.closest("button")) event.preventDefault();
     });
-    const editor = document.getElementById('editor');
-    Sortable.create(editor, {
-        animation: 150,
-        handle: '.block',
-        ghostClass: 'sortable-ghost'
+
+    document.querySelector(".doc-bar").addEventListener("click", function (event) {
+        const button = event.target.closest("[data-format]");
+        if (!button) return;
+        applyFormat(button.dataset.format);
     });
 
-    // Función para crear un bloque de texto
-    function addTextBlock() {
-        const block = createBlock('<textarea placeholder="Escribe aquí..."></textarea>');
-        editor.appendChild(block);
-        scrollToBottom();
-    }
+    document.addEventListener("selectionchange", markToolbar);
 
-    // Función para crear un bloque de imagen
-    function addImageBlock() {
-        const block = createBlock('<input type="file" accept="image/*" onchange="loadImage(event)" />');
-        editor.appendChild(block);
-        scrollToBottom();
-    }
+    editor.addEventListener("keydown", function (event) {
+        if ((event.metaKey || event.ctrlKey) && "biu".includes(event.key.toLowerCase())) {
+            event.preventDefault();
+            return;
+        }
+        if (event.key === "Enter") {
+            event.preventDefault();
+            insertBreak();
+            return;
+        }
+        if (event.key === "Backspace") mergeBackward(event);
+    });
 
-    // Función para crear un bloque de título (H2 o H3)
-    function addHeadingBlock(headingType) {
-        const fontSize = headingType === 'H2' ? '24px' : '20px';
-        const block = createBlock(`<textarea placeholder="Título (${headingType})" style="font-size: ${fontSize}; font-weight: bold;"></textarea>`);
-        editor.appendChild(block);
-        scrollToBottom();
-    }
+    editor.addEventListener("paste", function (event) {
+        event.preventDefault();
+        const text = (event.clipboardData || window.clipboardData).getData("text/plain").replace(/\r\n?/g, "\n");
+        if (!text) return;
+        const lines = text.split("\n");
+        const unit = currentUnit();
+        if (!unit || unit.classList.contains("doc-figure")) {
+            let after = unit;
+            lines.forEach(function (line) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = line;
+                if (after) after.after(paragraph);
+                else editor.appendChild(paragraph);
+                after = paragraph;
+            });
+            placeCaret(after, true);
+            return;
+        }
+        const tail = splitText(unit);
+        const make = unit.tagName === "LI" ? "li" : "p";
+        unit.textContent = unit.textContent + lines[0];
+        let last = unit;
+        for (let index = 1; index < lines.length; index += 1) {
+            const line = document.createElement(make);
+            line.textContent = lines[index];
+            last.after(line);
+            last = line;
+        }
+        if (tail) {
+            const rest = document.createElement(make);
+            rest.textContent = tail;
+            last.after(rest);
+        }
+        placeCaret(last, true);
+        markToolbar();
+    });
 
-    // Función para crear un bloque de cita
-    function addQuoteBlock() {
-        const block = createBlock('<textarea placeholder="Escribe una cita..." class="quote-block"></textarea>');
-        editor.appendChild(block);
-        scrollToBottom();
-    }
+    editor.addEventListener("click", function (event) {
+        const button = event.target.closest(".doc-remove");
+        if (!button) return;
+        const figure = button.closest(".doc-figure");
+        const next = figure.nextElementSibling;
+        figure.remove();
+        if (!editor.firstElementChild) editor.appendChild(document.createElement("p"));
+        const target = next && editor.contains(next) ? next : editor.firstElementChild;
+        placeCaret(target.tagName === "UL" ? target.querySelector("li") : target, false);
+    });
 
-    // Función para crear un bloque de lista de viñetas
-    function addBulletListBlock() {
-        const block = createBlock('<ul contenteditable="true" class="bullet-list"><li></li></ul>');
-        editor.appendChild(block);
-        scrollToBottom();
-    }
-
-    // Función para crear un bloque genérico con un botón de eliminar
-    function createBlock(content) {
-        const block = document.createElement('div');
-        block.classList.add('block');
-        block.innerHTML = content + `<button class="delete-btn" onclick="deleteBlock(this)">X</button>`;
-        return block;
-    }
-
-    // Función para eliminar un bloque
-    function deleteBlock(button) {
-        const block = button.parentNode;
-        block.remove();
-    }
-
-    // Función para cargar y mostrar una imagen seleccionada por el usuario
-    function loadImage(event) {
-        const block = event.target.parentNode;
+    imageInput.addEventListener("change", function () {
+        const file = imageInput.files && imageInput.files[0];
+        imageInput.value = "";
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = function () {
-            block.innerHTML = `<div class="resizable"><img src="${reader.result}" alt="Imagen"></div>
-                               <button class="delete-btn" onclick="deleteBlock(this)">X</button>`;
+            const figure = document.createElement("div");
+            figure.className = "doc-figure";
+            figure.contentEditable = "false";
+            const image = document.createElement("img");
+            image.src = reader.result;
+            image.alt = "Imagen";
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "doc-remove";
+            remove.setAttribute("aria-label", "Quitar imagen");
+            remove.textContent = "×";
+            figure.append(image, remove);
+            if (imageInput.savedRange && editor.contains(imageInput.savedRange.startContainer)) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(imageInput.savedRange);
+            }
+            const anchor = topBlock();
+            const follow = document.createElement("p");
+            if (anchor && !anchor.classList.contains("doc-figure") && !textOf(anchor) && anchor.tagName !== "UL") {
+                anchor.replaceWith(figure);
+            } else if (anchor) {
+                anchor.after(figure);
+            } else {
+                editor.appendChild(figure);
+            }
+            figure.after(follow);
+            fade(figure);
+            placeCaret(follow, false);
+            markToolbar();
         };
-        reader.readAsDataURL(event.target.files[0]);
+        reader.readAsDataURL(file);
+    });
+
+    function escapeHtml(value) {
+        return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    // Función para guardar el contenido en la base de datos
-    function scrollToBottom() {
-        window.scrollTo(0, document.body.scrollHeight);
+    function serializeDocument() {
+        let html = "";
+        Array.from(editor.children).forEach(function (node) {
+            if (node.classList.contains("doc-figure")) {
+                const image = node.querySelector("img");
+                const src = image ? image.getAttribute("src") : "";
+                if (src && src.indexOf("data:image/") === 0 && src.indexOf("\"") === -1) {
+                    html += '<img src="' + src + '" alt="Imagen">';
+                }
+                return;
+            }
+            if (node.tagName === "UL") {
+                const items = Array.from(node.querySelectorAll("li")).map(textOf).filter(Boolean);
+                if (!items.length) return;
+                html += "<ul>" + items.map(function (item) {
+                    return "<li>" + escapeHtml(item) + "</li>";
+                }).join("") + "</ul>";
+                return;
+            }
+            if (!["P", "H2", "H3", "BLOCKQUOTE"].includes(node.tagName)) return;
+            const text = textOf(node);
+            if (!text) return;
+            const tag = node.tagName.toLowerCase();
+            html += "<" + tag + ">" + escapeHtml(text) + "</" + tag + ">";
+        });
+        return html;
     }
 
     function setStatus(message, kind) {
@@ -132,8 +441,9 @@
             setStatus('Escribe un título antes de guardar.', 'is-error');
             return;
         }
-        if (!editor.children.length) {
-            setStatus('Agrega al menos un párrafo antes de guardar.', 'is-error');
+        const contentHTML = serializeDocument();
+        if (!contentHTML) {
+            setStatus('Escribe el texto antes de guardar.', 'is-error');
             return;
         }
         saveButton.classList.add('is-busy');
@@ -141,30 +451,6 @@
         saveButton.disabled = true;
         setStatus('');
         const categoriaId = {{ categoria.id }};
-        const blocks = editor.children;
-        let contentHTML = '';
-
-        for (let block of blocks) {
-            if (block.querySelector('textarea')) {
-                let content = block.querySelector('textarea').value;
-                let style = block.querySelector('textarea').style.cssText;
-                if (block.querySelector('.quote-block')) {
-                    contentHTML += `<blockquote>${content}</blockquote>`;
-                } else if (style.includes('font-size: 24px')) {
-                    contentHTML += `<h2>${content}</h2>`;
-                } else if (style.includes('font-size: 20px')) {
-                    contentHTML += `<h3>${content}</h3>`;
-                } else {
-                    contentHTML += `<p>${content}</p>`;
-                }
-            } else if (block.querySelector('.resizable')) {
-                let src = block.querySelector('img').src;
-                contentHTML += `<img src="${src}" alt="Imagen">`;
-            } else if (block.querySelector('ul')) {
-                let listHTML = block.querySelector('ul').outerHTML;
-                contentHTML += listHTML;
-            }
-        }
 
         const data = {
             'title': title,
