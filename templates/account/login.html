@@ -1,0 +1,33 @@
+
+{% extends "base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="text-center">{% trans "Iniciar Sesión" %}</h1>
+                    <form method="post" action="{% url 'account_login' %}">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        {{ redirect_field }}
+                        <button type="submit" class="btn btn-primary btn-block mt-3">{% trans "Iniciar Sesión" %}</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p>{% trans "¿No tienes cuenta?" %}</p>
+                        <a href="{% url 'account_signup' %}" class="btn btn-secondary">{% trans "Registrarse" %}</a>
+                    </div>
+                    <div class="social-login mt-3">
+                        {% include "socialaccount/snippets/login.html" %}
+                    </div>
+                    <p class="text-center mt-3">
+                        <a href="{% url 'account_reset_password' %}">{% trans "¿Olvidaste tu contraseña?" %}</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,48 @@
+"""
+Configuración de URLs para la aplicación login.
+
+Define las rutas para la gestión de roles y categorías, así como otras funcionalidades relacionadas con la autenticación.
+"""
+
+from django.urls import path
+from .views import *
+
+urlpatterns = [
+    path('', inicio, name='inicio'),
+    path('inicio/', inicio, name='inicio'),
+    path('logout/',exit,name='exit'),
+    path('rol/', rol, name='rol' ),
+
+    path('home/', home, name='home'),
+    path('home/categoria/<str:descripcion_corta>/', publicacionCategoria, name='categoria'),
+    path('home/categoria/', listadoCategorias, name='categoria'),
+    path('home/search/', search),
+    path('search/', filtrar_publicaciones, name='search'),
+
+    path('gestionrol/', gestionarRol, name='gestionrol'),
+
+    path('adicionrol/', agregarRol, name='adicionrol'),
+    path('editar_rol/<int:rol_id>/', editarRol, name='editar_rol'),
+    path('eliminar_rol/<int:rol_id>/', eliminarRol, name='eliminar_rol'),
+
+    path('gestioncategoria/', gestionCategoria, name='gestioncategoria'),
+    path('editar_categoria/<int:categoria_id>/', editarCategoria, name='editar_categoria'),
+    path('eliminar_categoria/<int:categoria_id>/', eliminarCategoria, name='eliminar_categoria'),
+
+    path('seleccionar-plantilla/<int:categoria_id>/', seleccionar_plantilla, name='seleccionar_plantilla'),
+
+    path('ajustes/', ajustes, name='ajustes'),
+    path('perfil/<str:username>/', perfil, name='perfil'),
+    path('eliminar_usuario/<int:user_id>/', eliminar_usuario, name='eliminar_usuario'),
+]
+
+
+#Todavia no está terminado
+def usuario_tiene_permiso(usuario, permiso_nombre):
+    try:
+        usuario_instancia = Usuario.objects.get(user_id=usuario)
+        usuario_rol = UsuarioRolCategoria.objects.get(usuario_id=usuario_instancia)
+        rol = usuario_rol.rol_id
+        return Rol.objects.get(nombre=permiso_nombre).exists()
+    except UsuarioRolCategoria.DoesNotExist:
+        return False

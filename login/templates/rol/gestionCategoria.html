@@ -1,0 +1,113 @@
+{% extends 'encabezado.html' %}
+
+{% block content%}
+
+<head>
+    <title>Gestión de Categorías</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border-radius: 15px; /* Bordes redondeados externos */
+            overflow: hidden;
+        }
+        table, th, td {
+            border: 1px solid #606368;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #171717;
+        }
+        table {
+            border: 1px solid #606368; /* Borde externo de la tabla */
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gestión de Categorías</h1>
+
+    <!-- Formulario para añadir o modificar una categoría -->
+
+    <form method="POST"> 
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Crear Categoría</button>
+    </form>
+
+    <!-- Tabla de categorías existentes -->
+    <h2>Categorías Existentes</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descripción Corta</th>
+                <th>Descripción Larga</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in categorias %}
+            <tr>
+                <td> {{ i.id }} </td>
+                <td> {{ i.descripcion_corta }} </td>
+                <td> {{ i.descripcion_larga }} </td>
+                <td> {{ i.estado }} </td>
+                <td>
+                    <button class="btn-edit" onclick="window.location.href='{% url 'editar_categoria' i.id %}'">Editar</button>
+                    <form action="{% url 'eliminar_categoria' i.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-delete">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            
+            <!-- Más categorías -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function editCategory(code) {
+        // Aquí puedes agregar la lógica para cargar los datos de la categoría en el formulario para editar
+        alert('Editar categoría con código: ' + code);
+    }
+
+    function deleteCategory(code) {
+        // Aquí puedes agregar la lógica para confirmar y eliminar la categoría
+        if (confirm('¿Estás seguro de que deseas eliminar la categoría con código: ' + code + '?')) {
+            alert('Categoría eliminada: ' + code);
+            // Aquí iría la lógica para eliminar la categoría del sistema
+        }
+    }
+</script>
+
+
+
+
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'encabezado.html' %}
+
+{% block content%}
+<head>
+    <title>Pagina de Inicio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+
+        .welcome {
+            font-size: 18px;
+            text-align: justify;
+            margin-left: 10%;
+            margin-bottom: 20px;
+        }
+
+        .article-container {
+            display: flex;
+            align-items: flex-start;
+            background-color: #171717;
+            padding: 20px;
+            border-radius: 20px;
+            margin-left: 15%;
+            margin-right: 15%;
+            margin-bottom: 2%;
+        }
+
+        .article-container img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            padding: 10;
+            margin: 20px;
+        }
+
+        .article-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .description {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-transform: uppercase; text-align: center;"> {{ categoria_seleccionada }} </h1>
+    <br>
+    {% for i in publicaciones %}
+        {% if i.categoria.estado == 'Activo' and i.estado == 'publicado' %}
+            <div class="article-container" style="text-align: justify;">
+                <div class="article-content">
+                    <h2 style="text-transform: uppercase;" class="article-title">{{ i.titulo }}</h2>
+                    <div class="category"> <a style="text-transform: uppercase;" href="#">{{ i.categoria.descripcion_corta }}</a> </div>
+                    <div class="description">
+                        <a href="/perfil/{{i.user }}"><h3>Autor: {{ i.user }}</h3></a>
+                        {% load custom_filters %}
+
+                        {{ i.contenido_html|solo_parrafos|slice:":255" }}...
+                    </div>
+                    <a class="read-more" href="{% url 'previsualizar_publicacion' i.id %}">LEER MÁS</a>
+                    <p style="text-align: right;"><strong>Visualizaciones:</strong> {{ i.vistas }} | <strong>Likes: </strong>{{ i.me_gustas }}</p>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+{% endblock %}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encabezado con Links</title>
+    <style>
+        /* Estilos básicos para el encabezado */
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #F8F7F6;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            border-radius: 15px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+
+        nav a:hover {
+            background-color: #575757;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: auto;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .btn-edit {
+            background-color: #007bff;
+        }
+        .btn-edit:hover {
+            background-color: #0056b3;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <a href="/" style="color: white; text-decoration: none;">Journal X</a>
+        </div>
+        <nav>
+            <a href="/home">Inicio</a>
+            <a href="/gestionrol">Asignar Rol</a>
+            <a href="/adicionrol">Gestión Rol</a>
+            <a href="/gestioncategoria">Gestión Categoría</a>
+        </nav>
+    </header>
+
+    <!-- Resto del contenido de la página -->
+    <div class="content">
+        {% block content %}
+        <!-- El contenido específico de cada página se insertará aquí -->
+        {% endblock %}
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Journal X. Todos los derechos reservados.</p>
+        <p><a href="/contacto" style="color: white;">Contacto</a> | <a href="/privacidad" style="color: white;">Política de Privacidad</a></p>
+    </footer>
+</body>
+</html>

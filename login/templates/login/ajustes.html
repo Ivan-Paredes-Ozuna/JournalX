@@ -1,0 +1,231 @@
+{% extends 'encabezado.html' %}
+
+{% block content%}
+<head>
+    <title>Configuración de Perfil</title>
+    <style>
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            margin: 0 auto;
+            display: flex;
+            width: 70%;
+            background-color: #27272a;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar {
+            width: 30%;
+            background-color: #151519;
+            padding: 40px;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            text-decoration: none;
+            color: #fff;
+            font-size: 1.1em;
+        }
+        .main-content {
+            width: 70%;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        .form-section {
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="password"], input[type="file"], input[type="email"]  {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border: none;
+            background-color: #3a3a3f;
+            color: #fff;
+        }
+        input[type="file"] {
+            color: #fff;
+        }
+        .form-section .half-input {
+            display: inline-block;
+            width: 48%;
+            margin-right: 2%;
+        }
+        .half-input:last-child {
+            margin-right: 0;
+        }
+        .submit-btn {
+            background-color: #4571E4;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .btn-delete {
+            background-color: #D24330;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .submit-btn:hover {
+            filter: brightness(1.2)
+        }
+
+        /* Estilos para el toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #4571E4;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+
+<h1>MI CUENTA</h1>
+<div class="container">
+    <div class="sidebar">
+        <ul>
+            <li><a href="#Personal">PERSONAL</a></li>
+            <li><a href="#Seguridad">SEGURIDAD</a></li>
+            <li><a href="#Notificacion">NOTIFICACIÓN</a></li>
+            <li><a href="#Sesion">CERRAR SESIÓN</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        
+        <!-- Detalles personales -->
+        <div class="form-section">
+            <h2 id="Personal">DETALLES PERSONALES</h2>
+
+            <form method="POST" enctype="multipart/form-data" >
+                {% csrf_token %}
+                {{ form_nombre_apellido.as_p }} 
+                <input type="hidden" name="form_type" value="nombre_apellido">
+                <button class="submit-btn" type="submit">GUARDAR</button>
+            </form>
+            <br>
+        
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form_foto_bio }}
+
+                <input type="hidden" name="form_type" value="foto_bio">
+                <button class="submit-btn" type="submit">GUARDAR</button>
+            </form>
+        </div>
+
+        <!-- Seguridad -->
+        <div class="form-section">
+            <h2 id="Seguridad">SEGURIDAD</h2>
+            <form method="POST" enctype="multipart/form-data" >
+                {% csrf_token %}
+                {{ form_nueva_contrasena.as_p }} 
+                <input type="hidden" name="form_type" value="contrasena">
+                <button class="submit-btn" type="submit">GUARDAR</button>
+            </form>
+        </div>
+
+        <!-- Notificacion -->
+        <div class="form-section">
+            <h2 id="Notificacion">Notificación</h2>
+
+            <form method="POST" enctype="multipart/form-data" >
+                {% csrf_token %}
+                {{ form_nuevo_email.as_p }} 
+                <input type="hidden" name="form_type" value="email">
+                <button class="submit-btn" type="submit">GUARDAR</button>
+            </form>
+            <br>
+
+            <!-- Nuevo toggle switch para recibir notificaciones por correo -->
+            <div class="form-section">
+                <label for="toggle-notifications">Recibir notificaciones por correo:</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-notifications" name="recibir_notificaciones" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- Cerrar sesion -->
+         <div class="form-section">
+            <h2 id="Sesion">Sesión</h2>
+            <a class="btn-delete" href="{% url 'exit' %}">CERRAR SESION</a>
+            <a class="btn-delete" href="{% url 'eliminar_usuario' request.user.id %}" 
+            onclick="return confirm('¿Estás seguro que quieres eliminar tu cuenta?')">ELIMINAR CUENTA</a>
+         </div>
+    </div>
+</div>
+
+{% endblock %}
