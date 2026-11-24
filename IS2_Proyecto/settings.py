@@ -212,7 +212,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # redireccion para login y logout
-LOGIN_REDIRECT_URL = 'inicio'
+LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'inicio'
 
 #static system

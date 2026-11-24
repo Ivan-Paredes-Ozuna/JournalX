@@ -12,24 +12,99 @@
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Yanone+Kaffeesatz:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/journalx.css' %}">
 </head>
-<body class="gate-body">
-    <main class="gate">
+<body>
+    <a class="skip" href="#contenido">Saltar al contenido</a>
+    <header class="landing-bar">
         <a class="brand" href="{% url 'inicio' %}">Journal X</a>
-        {% if request.user.is_authenticated %}
-            <h1>Hola, {{ user.username }}.</h1>
-            <p class="lede">Tu sesión sigue abierta. Entra al inicio para leer o continuar un borrador.</p>
-            <div class="actions">
+        <div class="landing-nav">
+            {% if user.is_authenticated %}
                 <a class="btn" href="{% url 'home' %}">Ir al inicio</a>
-                <a class="btn-ghost" href="{% url 'exit' %}">Cerrar sesión</a>
-            </div>
-        {% else %}
-            <h1>Textos con revisión editorial.</h1>
-            <p class="lede">Encuentra textos por categoría, guarda borradores y sigue cada uno hasta publicarlo.</p>
+            {% else %}
+                <a class="btn-ghost" href="{% url 'account_login' %}">Entrar</a>
+                <a class="btn" href="{% url 'account_signup' %}">Crear cuenta</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main id="contenido" class="landing">
+        <section class="landing-hero">
+            <p class="kicker">Divulgación científica y tecnológica</p>
+            <h1>Textos de ciencia y tecnología, publicados después de una revisión.</h1>
+            <p class="lede">Journal X es el lugar para leer y escribir sobre esos temas. Un texto no aparece en el inicio hasta que pasa de borrador a revisión y alguien con permiso lo publica.</p>
             <div class="actions">
-                <a class="btn" href="{% url 'account_login' %}">Entrar</a>
-                <a class="btn-ghost" href="{% url 'account_signup' %}">Crear cuenta</a>
+                {% if user.is_authenticated %}
+                    <a class="btn" href="{% url 'home' %}">Ir al inicio</a>
+                    <a class="btn-ghost" href="{% url 'exit' %}">Cerrar sesión</a>
+                {% else %}
+                    <a class="btn" href="{% url 'account_signup' %}">Crear cuenta</a>
+                    <a class="btn-ghost" href="{% url 'account_login' %}">Entrar</a>
+                {% endif %}
             </div>
+        </section>
+
+        {% if categorias %}
+        <section class="landing-section" aria-labelledby="temas">
+            <h2 id="temas">Temas</h2>
+            <ul class="landing-topics">
+                {% for categoria in categorias %}
+                    <li>{{ categoria.descripcion_corta }}</li>
+                {% endfor %}
+            </ul>
+        </section>
         {% endif %}
+
+        <section class="landing-section" aria-labelledby="recorrido">
+            <h2 id="recorrido">Recorrido de un texto</h2>
+            <ol class="landing-steps">
+                <li>
+                    <span>1</span>
+                    <h3>Escribir</h3>
+                    <p>El autor elige un tema y redacta en una hoja: párrafos, subtítulos, listas, citas e imágenes. Guardar lo deja en borrador.</p>
+                </li>
+                <li>
+                    <span>2</span>
+                    <h3>Revisar</h3>
+                    <p>Lo envía a revisión. Quien tiene permiso lo aprueba o lo rechaza. El tablero muestra en qué estado está cada texto.</p>
+                </li>
+                <li>
+                    <span>3</span>
+                    <h3>Publicar</h3>
+                    <p>Al publicarlo queda visible en el inicio, dentro de su tema. Un texto publicado no se edita hasta que sale de ese estado.</p>
+                </li>
+                <li>
+                    <span>4</span>
+                    <h3>Leer</h3>
+                    <p>Quien lee puede comentar y marcar me gusta. Cada cambio de estado queda en el historial del texto.</p>
+                </li>
+            </ol>
+        </section>
+
+        <section class="landing-section" aria-labelledby="construida">
+            <h2 id="construida">Cómo está construida</h2>
+            <div class="landing-grid">
+                <article>
+                    <h3>Django</h3>
+                    <p>El sitio corre en Django 5.1. Las páginas son plantillas HTML. El aspecto y el comportamiento están en el CSS y el JavaScript del proyecto, sin una aplicación aparte en el navegador.</p>
+                </article>
+                <article>
+                    <h3>PostgreSQL</h3>
+                    <p>Los textos, las cuentas, los roles y las categorías viven en PostgreSQL. Cada publicación guarda el título, el HTML, el estado, el tema, el autor, las lecturas y los me gusta.</p>
+                </article>
+                <article>
+                    <h3>Roles por tema</h3>
+                    <p>El permiso no es global: se otorga en una categoría. El autor escribe, el editor revisa, el publicador hace visible el texto, el suscriptor lee e interactúa, y el administrador organiza roles y categorías.</p>
+                </article>
+                <article>
+                    <h3>Cuentas</h3>
+                    <p>Se entra con usuario y contraseña. La entrada con Google es opcional. En local, el correo de recuperación se imprime en la terminal.</p>
+                </article>
+            </div>
+        </section>
     </main>
+
+    <footer class="landing-foot">
+        <p>© {% now "Y" %} Journal X</p>
+        <p>Divulgación científica y tecnológica, con revisión editorial.</p>
+    </footer>
 </body>
 </html>

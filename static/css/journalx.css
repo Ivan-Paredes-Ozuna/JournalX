@@ -1074,6 +1074,140 @@ th {
     margin-top: 20px;
 }
 
+.landing-bar,
+.landing,
+.landing-foot {
+    width: min(1120px, calc(100% - 32px));
+    margin-inline: auto;
+}
+
+.landing-bar {
+    min-height: var(--header);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.landing-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.landing {
+    padding-bottom: 48px;
+}
+
+.landing-hero {
+    max-width: 42rem;
+    padding: 28px 0 8px;
+}
+
+.landing-hero h1 {
+    font-family: var(--display);
+    font-size: clamp(2.6rem, 6vw, 4.4rem);
+    line-height: 0.96;
+    font-weight: 700;
+    margin: 8px 0 14px;
+}
+
+.landing .lede {
+    max-width: 62ch;
+    color: var(--muted);
+    font-size: 1.12rem;
+}
+
+.landing-hero .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+}
+
+.landing-section {
+    margin-top: 40px;
+}
+
+.landing-section > h2 {
+    margin-bottom: 14px;
+}
+
+.landing-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.landing-topics li {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    background: var(--raised);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.landing-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.landing-steps li,
+.landing-grid article {
+    margin: 0;
+    padding: 16px;
+    background: var(--raised);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+}
+
+.landing-steps span {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.landing-steps h3,
+.landing-grid h3 {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+}
+
+.landing-steps p,
+.landing-grid p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.landing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.landing-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--faint);
+}
+
+.landing-foot p {
+    margin: 0;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -1086,6 +1220,15 @@ th {
 }
 
 @media (max-width: 900px) {
+    .landing-steps,
+    .landing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-foot {
+        flex-direction: column;
+    }
+
     .nav-toggle {
         display: inline-flex;
         margin-left: auto;
@@ -1461,6 +1604,7 @@ button.like.is-busy::after {
     z-index: 5;
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
     margin: 0 0 12px;
     padding: 6px;
@@ -1496,8 +1640,12 @@ button.like.is-busy::after {
 }
 
 .doc {
-    min-height: 320px;
-    padding: 4px 2px 8px;
+    min-height: 280px;
+    padding: 18px 18px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    background: var(--sunken);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     outline: none;
     font-size: 1.125rem;
     line-height: 1.7;
@@ -1534,16 +1682,23 @@ button.like.is-busy::after {
 
 .doc ul {
     margin: 0 0 0.8em;
-    padding-left: 1.3rem;
+    padding-left: 1.25rem;
+}
+
+.doc li::marker {
+    color: var(--muted);
 }
 
 .doc > p:only-child:empty::before,
-.doc > p:only-child:has(> br:only-child)::before {
+.doc > p:only-child:has(> br:only-child)::before,
+.doc > ul:only-child > li:only-child:empty::before,
+.doc > ul:only-child > li:only-child:has(> br:only-child)::before {
     content: "Empieza a escribir…";
     color: var(--faint);
 }
 
-.doc > p:only-child > br:only-child {
+.doc > p:only-child > br:only-child,
+.doc > ul:only-child > li:only-child > br:only-child {
     display: none;
 }
 
@@ -1725,7 +1880,10 @@ button.like.is-busy::after {
     .header-bar,
     .site-nav,
     .footer-inner,
-    .footer-base {
+    .footer-base,
+    .landing-bar,
+    .landing,
+    .landing-foot {
         width: min(1120px, calc(100% - 24px));
     }
 

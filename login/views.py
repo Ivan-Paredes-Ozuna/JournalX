@@ -92,13 +92,13 @@ def listadoCategorias(request):
 
 def inicio(request):
     """
-    Renderiza la página de inicio de sesión.
-
-    Retorna:
-        HttpResponse: Renderiza la plantilla "login/inicio.html".
+    Página pública de entrada. Quien ya tiene sesión va al inicio de textos.
     """
 
-    return render(request, "login/inicio.html")
+    if request.user.is_authenticated:
+        return redirect('home')
+    categorias = Categoria.objects.filter(estado='Activo').order_by('descripcion_corta')
+    return render(request, "login/inicio.html", {'categorias': categorias})
 
 
 def exit(request):
