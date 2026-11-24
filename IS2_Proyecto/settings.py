@@ -132,11 +132,11 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'is2_proyecto',
-            'USER': 'postgres',
-            'PASSWORD': 'postgres',
-            'HOST': 'localhost',
-            'PORT': '5432',
+            'NAME': env('DB_NAME', default='is2_proyecto'),
+            'USER': env('DB_USER', default='postgres'),
+            'PASSWORD': env('DB_PASSWORD', default='postgres'),
+            'HOST': env('DB_HOST', default='localhost'),
+            'PORT': env('DB_PORT', default='5432'),
         },
     }
 
@@ -215,14 +215,6 @@ AUTHENTICATION_BACKENDS = (
 LOGIN_REDIRECT_URL = 'inicio'
 LOGOUT_REDIRECT_URL = 'inicio'
 
-#configuracion adicionales de django-Allauth
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# EMAIL_BACKEND = 'mi config'
-
-
 #static system
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_TMP = os.path.join(BASE_DIR, 'static')
@@ -242,10 +234,13 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-#configuracion para el envio de correos
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'journalxcms@gmail.com'
-EMAIL_HOST_PASSWORD = 'ynip lryj dnfk ymmi'
+# En local los correos se imprimen en la terminal. El SMTP queda para producción.
+if ENVIRONMENT == 'production':
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = 'journalxcms@gmail.com'
+    EMAIL_HOST_PASSWORD = 'ynip lryj dnfk ymmi'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

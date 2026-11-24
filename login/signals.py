@@ -18,8 +18,10 @@ def asignar_rol_suscriptor(sender, instance, created, **kwargs):
     """
 
     if created:
-        # Obtén el rol con id 5
-        rol_suscriptor = Rol.objects.get(id=5)
+        try:
+            rol_suscriptor = Rol.objects.get(nombre='Suscriptor')
+        except Rol.DoesNotExist:
+            return
         # Obtén todas las categorías
         categorias = Categoria.objects.all()
         # Crea una instancia de UsuarioRolCategoria para cada categoría

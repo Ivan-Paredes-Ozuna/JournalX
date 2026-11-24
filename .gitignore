@@ -1,8 +1,11 @@
 __pycache__/
 *.pyc
 *.env
-/IS2_Proyecto/__pycache__
-/login/__pycache__
+.env
+.venv/
+venv/
+media/
+.DS_Store
 
 # Referencia local de skills. No forma parte de la aplicación.
 skills/
