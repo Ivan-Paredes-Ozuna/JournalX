@@ -13,7 +13,7 @@ Desde la carpeta del proyecto:
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate 
 pip install -r requirements.txt
 cp .env.example .env
 ```
