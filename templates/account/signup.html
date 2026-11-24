@@ -1,24 +1,13 @@
 {% extends "base.html" %}
 {% load i18n crispy_forms_tags %}
-{% block title %}Registrarse{% endblock title %}
+{% block title %}Crear cuenta · Journal X{% endblock %}
 {% block content %}
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h1 class="text-center">{% trans "Registrarse" %}</h1>
-                        <p class="text-center">
-                            {% blocktranslate %}¿Ya tienes una cuenta? Por favor <a href="{{ login_url }}">inicia sesión</a>.{% endblocktranslate %}
-                        </p>
-                        <form method="post" action="{% url 'account_signup' %}">
-                            {% csrf_token %}
-                            {{ form|crispy }}
-                            <button type="submit" class="btn btn-primary btn-block mt-4">{% trans "Registrarse" %}</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-{% endblock content %}
+<h1>Crear cuenta</h1>
+<p class="lede">Con una cuenta puedes leer, comentar y, si tu rol lo permite, escribir.</p>
+<p>¿Ya tienes cuenta? <a href="{{ login_url }}">Entra aquí</a>.</p>
+<form method="post" action="{% url 'account_signup' %}">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit">Crear cuenta</button>
+</form>
+{% endblock %}

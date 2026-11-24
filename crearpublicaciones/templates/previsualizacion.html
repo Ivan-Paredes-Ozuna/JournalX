@@ -1,144 +1,108 @@
 {% extends 'encabezado.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ publicacion.titulo }} · Journal X{% endblock %}
 
 {% block content %}
-{% load custom_filters %}
-<head>
-    <style>
-        .button-container {
-            display: flex;
-            justify-content: center;
-            gap: 10px; /* Espacio entre los botones */
-        }
-
-        .button-container form,
-        .button-container button {
-            margin: 0; /* Asegura que no haya márgenes adicionales */
-        }
-
-        .contenido img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto; /* Centra la imagen */
-        }
-        .comentario-container {
-                display: flex;
-                align-items: flex-start;
-                background-color: #171717;
-                padding: 20px;
-                border-radius: 20px;
-                margin-left: 15%;
-                margin-right: 15%;
-                margin-bottom: 2%;
-            }
-    </style>
-</head>
-<body>
-    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-        <h1 style="text-align: center;">{{ publicacion.titulo }}</h1>
-    
-        <div class="contenido" style="max-width: 100%; margin: 0 auto;">
-            <!-- Mostrar el contenido HTML almacenado -->
-            {{ publicacion.contenido_html|safe }}
-        </div>
-    
-        <div class="informacion-extra" style="text-align: center; margin-top: 20px;">
-            <p style="text-align: right;"><strong>Visualizaciones:</strong> {{ publicacion.vistas }}</p>
-            <p style="text-align: right;"><strong>
-            {% if 'interactuar publicaciones' in permisos_categoria|get_item:publicacion.categoria.id %}
-                {% if likeado %}
-                    <a href="{% url 'dislikear' publicacion.id  %}">Ya no me gusta 💔😭</a></strong>
-                {% else %}
-                    <a href="{% url 'likear' publicacion.id %}">Me gusta 💖✨</a></strong>
-                {% endif %}
-            {% else %}
-                </strong>
-            {% endif %}
-
-            {% if publicacion.me_gustas == 1 %}
-                A {{ publicacion.me_gustas }} persona le ha gustado </p>
-            {% else %}
-                A {{ publicacion.me_gustas }} personas les ha gustado </p>
-            {% endif %}
-            <p><strong>Publicado por:</strong> {{ publicacion.user.username }}</p>
-            <p><strong>Categoría:</strong> {{ publicacion.categoria.descripcion_corta }}</p>
-            <p><strong>Fecha de Creación:</strong> {{ publicacion.fecha_creacion }}</p>
-            <p><strong>Estado:</strong> {{ publicacion.get_estado_display }}</p>
-            <br>
-            <div class="button-container">
-                {% if request.user == publicacion.user or 'gestionar contenido otros' in permisos_categoria|get_item:publicacion.categoria.id %}
-                    <form action="{% url 'eliminar_publicacion' publicacion.id %}" method="POST">
-                        {% csrf_token %}
-                        <button type="submit" class="btn-delete" onclick="return confirm('¿Está seguro que desea eliminar esta publicación?')">Eliminar Publicación</button>
-                    </form>
-                    {% if  publicacion.estado != 'publicado' %}
-                        <button class="submit" onclick="window.location.href='{% url 'modificar_publicacion' publicacion.id %}'">Modificar Publicacion</button>
-                
-                    {% endif %}
-                {% endif %}
-
-                {% if request.user == publicacion.user or 'acceder reportes' in permisos_categoria|get_item:publicacion.categoria.id %}
-                    <button class="btn-edit" onclick="window.location.href='{% url 'historial_publicacion' publicacion.id %}'">Ver Historial de Cambios</button>
-                {% endif %}
-            </div>
-            
-        </div>
-    
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="{% url 'mis_publicaciones' %}" class="btn btn-primary">Ir a mis publicaciones</a>
-        </div>
+<div id="publicacion-viva">
+<article class="reading">
+    <p class="kicker">{{ publicacion.categoria.descripcion_corta }}</p>
+    <h1>{{ publicacion.titulo }}</h1>
+    <div class="reading-meta">
+        <span>Por <a href="{% url 'perfil' publicacion.user.username %}">{{ publicacion.user.username }}</a></span>
+        <time datetime="{{ publicacion.fecha_creacion|date:'Y-m-d' }}">{{ publicacion.fecha_creacion|date:"d M Y" }}</time>
+        <span class="badge badge-{{ publicacion.estado }}">{{ publicacion.get_estado_display }}</span>
+        <span>{{ publicacion.vistas }} lecturas</span>
     </div>
 
-    {% if 'interactuar publicaciones' in permisos_categoria|get_item:publicacion.categoria.id %}
-        <form action="{% url 'comentario' publicacion.id %}" method="POST" style="text-align: center; margin-bottom: 2%;">
-            {% csrf_token %}
-            <button type="submit">Nuevo Comentario</button>
-        </form>
+    <div class="contenido">
+        {{ publicacion.contenido_html|safe }}
+    </div>
+
+    <div class="engage">
+        {% if 'interactuar publicaciones' in permisos_categoria|get_item:publicacion.categoria.id %}
+            <button
+                type="button"
+                class="like {% if likeado %}is-on{% endif %}"
+                data-like
+                data-like-url="{% url 'likear' publicacion.id %}"
+                data-unlike-url="{% url 'dislikear' publicacion.id %}"
+                aria-pressed="{% if likeado %}true{% else %}false{% endif %}">
+                {% if likeado %}Quitar me gusta{% else %}Me gusta{% endif %}
+            </button>
+        {% endif %}
+        <span id="like-count">{{ publicacion.me_gustas }} me gusta</span>
+        <span id="like-status" class="status" role="status"></span>
+    </div>
+
+    {% if request.user == publicacion.user or 'gestionar contenido otros' in permisos_categoria|get_item:publicacion.categoria.id or 'acceder reportes' in permisos_categoria|get_item:publicacion.categoria.id %}
+        <div class="actions">
+            {% if request.user == publicacion.user or 'gestionar contenido otros' in permisos_categoria|get_item:publicacion.categoria.id %}
+                {% if publicacion.estado != 'publicado' %}
+                    <a class="btn" href="{% url 'modificar_publicacion' publicacion.id %}">Modificar</a>
+                {% endif %}
+                <button
+                    type="button"
+                    class="btn-danger"
+                    data-delete="{% url 'eliminar_publicacion' publicacion.id %}"
+                    data-remove="#publicacion-viva"
+                    data-after="{% url 'mis_publicaciones' %}"
+                    data-label="Eliminar"
+                    data-confirm="¿Eliminar esta publicación? No se puede deshacer.">Eliminar</button>
+            {% endif %}
+            {% if request.user == publicacion.user or 'acceder reportes' in permisos_categoria|get_item:publicacion.categoria.id %}
+                <a class="btn-ghost" href="{% url 'historial_publicacion' publicacion.id %}">Historial</a>
+            {% endif %}
+        </div>
     {% endif %}
 
+    <p style="margin-top: 18px;"><a href="{% url 'home' %}">Volver al inicio</a></p>
+</article>
+
+<section class="reading" aria-labelledby="comentarios-titulo">
+    <h2 id="comentarios-titulo">Comentarios</h2>
+    {% if 'interactuar publicaciones' in permisos_categoria|get_item:publicacion.categoria.id %}
+        <form id="comment-form" class="comment-form" action="{% url 'comentario' publicacion.id %}" method="post">
+            {% csrf_token %}
+            <label for="descripcion">Tu comentario</label>
+            <textarea id="descripcion" name="descripcion" rows="4" required></textarea>
+            <button type="submit" class="btn">Publicar comentario</button>
+            <p id="comment-status" class="status" role="status"></p>
+        </form>
+    {% endif %}
+    <div id="comentario-lista">
     {% for comentario in comentarios %}
-        <div class="comentario-container" style="text-align: justify;">
-            <div class="article-content">
-                <h2 style="text-transform: uppercase;" class="article-title" id="comentario_{{comentario.id}}"> {{comentario.user.username}} </h2>
-                <p> {{ comentario.fecha_creacion }} </p>
-                <div class="description">
-                    <p>{{ comentario.descripcion }}</p>
-
-                    {% if request.user == comentario.user or 'gestionar contenido otros' in permisos_categoria|get_item:publicacion.categoria.id %}
-                        <form action="{% url 'eliminar_comentario' comentario.id %}" method="POST">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-delete">Eliminar</button>
-                        </form>
-                    {% endif %}
-
-                </div>
-            </div>
-        </div>        
+        <article class="comment" id="comentario_{{ comentario.id }}">
+            <h3><a href="{% url 'perfil' comentario.user.username %}">{{ comentario.user.username }}</a></h3>
+            <p class="when">{{ comentario.fecha_creacion|date:"d M Y, H:i" }}</p>
+            <p>{{ comentario.descripcion }}</p>
+            {% if request.user == comentario.user or 'gestionar contenido otros' in permisos_categoria|get_item:publicacion.categoria.id %}
+                <button
+                    type="button"
+                    class="btn-danger"
+                    data-delete="{% url 'eliminar_comentario' comentario.id %}"
+                    data-remove=".comment"
+                    data-label="Eliminar comentario"
+                    data-confirm="¿Eliminar este comentario?">Eliminar comentario</button>
+            {% endif %}
+        </article>
+    {% empty %}
+        <p class="lede" id="comentario-vacio">Todavía no hay comentarios.</p>
     {% endfor %}
-    <script>
-        // Espera 20 segundos antes de enviar la solicitud al backend
-        setTimeout(function(){
-            // Realiza una solicitud AJAX al backend
-            fetch("{% url 'incrementar_vistas' publicacion.id %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error al incrementar las vistas.');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Vistas incrementadas:', data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        }, 20000); // 20 segundos
-    </script>
+    </div>
+</section>
+</div>
+
+<script>
+    setTimeout(function () {
+        fetch("{% url 'incrementar_vistas' publicacion.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({})
+        }).catch(function () {});
+    }, 20000);
+</script>
 {% endblock %}

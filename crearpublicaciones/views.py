@@ -20,6 +20,7 @@ from django.http import JsonResponse, Http404
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from login.utils import *
 
 from django.db.models import Q
@@ -56,7 +57,7 @@ def crear_publicacion(request, categoria_id):
             publicacion = form.save(commit=False)
             publicacion.user = request.user  # Asigna el usuario autenticado
             publicacion.categoria = Categoria.objects.get(id=categoria_id)
-            publicacion.fecha_publicacion = null
+            publicacion.fecha_publicacion = None
             publicacion.save()  # Guarda la publicación
             
 
@@ -133,61 +134,50 @@ def incrementar_vistas(request, publicacion_id):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
 
+def _es_fetch(request):
+    return request.headers.get('X-Requested-With') == 'fetch'
+
+
+def _respuesta_accion(request, payload, status=200, redirect_to=None):
+    if _es_fetch(request) or status >= 400:
+        return JsonResponse(payload, status=status)
+    return redirect(redirect_to or 'home')
+
+
 @login_required
+@require_POST
 def likear(request, publicacion_id):
     """
-    Vista para dar "Me gusta" a una publicación.
-
-    Permite que el usuario autenticado agregue un "Me gusta" a la publicación especificada.
-
-    Args:
-        request (HttpRequest): La solicitud HTTP recibida.
-        publicacion_id (int): ID de la publicación.
-
-    Returns:
-        HttpResponse: Redirige a la previsualización de la publicación.
+    Registra un me gusta. Solo acepta POST: abrir la URL no cambia nada.
     """
 
     publicacion = get_object_or_404(Publicacion, id=publicacion_id)
     if not verificar_permisos_categoria_id(request, ['interactuar publicaciones'], publicacion.categoria_id):
-        return render(request, 'sin_permiso.html')
+        return JsonResponse({'ok': False, 'message': 'No puedes interactuar con esta publicación.'}, status=403)
 
-    likeado = Likes.objects.filter(user=request.user, publicacion=publicacion_id).exists()
+    likeado = Likes.objects.filter(user=request.user, publicacion=publicacion).exists()
     if not likeado:
-        publicacion = get_object_or_404(Publicacion, id=publicacion_id)
-        nuevo_like = Likes(user=request.user, publicacion=publicacion)
-        nuevo_like.save()
+        Likes.objects.create(user=request.user, publicacion=publicacion)
         publicacion.me_gustas += 1
-        publicacion.save()
-    return redirect('previsualizar_publicacion', publicacion_id=publicacion_id)
+        publicacion.save(update_fields=['me_gustas'])
+    return JsonResponse({'ok': True, 'liked': True, 'me_gustas': publicacion.me_gustas})
 
 @login_required
+@require_POST
 def dislikear(request, publicacion_id):
     """
-    Vista para quitar un "Me gusta" de una publicación.
-
-    Permite que el usuario autenticado quite un "Me gusta" de la publicación especificada.
-
-    Args:
-        request (HttpRequest): La solicitud HTTP recibida.
-        publicacion_id (int): ID de la publicación.
-
-    Returns:
-        HttpResponse: Redirige a la previsualización de la publicación.
+    Quita un me gusta. Solo acepta POST: abrir la URL no cambia nada.
     """
 
     publicacion = get_object_or_404(Publicacion, id=publicacion_id)
     if not verificar_permisos_categoria_id(request, ['interactuar publicaciones'], publicacion.categoria_id):
-        return render(request, 'sin_permiso.html')
+        return JsonResponse({'ok': False, 'message': 'No puedes interactuar con esta publicación.'}, status=403)
 
-    likeado = Likes.objects.filter(user=request.user, publicacion=publicacion_id).exists()
-    like = Likes.objects.filter(user=request.user, publicacion=publicacion_id)
-    if likeado:
-        like.delete()
-        publicacion = get_object_or_404(Publicacion, id=publicacion_id)
-        publicacion.me_gustas -= 1
-        publicacion.save()
-    return redirect('previsualizar_publicacion', publicacion_id=publicacion_id)
+    eliminados, _ = Likes.objects.filter(user=request.user, publicacion=publicacion).delete()
+    if eliminados:
+        publicacion.me_gustas = max(0, publicacion.me_gustas - 1)
+        publicacion.save(update_fields=['me_gustas'])
+    return JsonResponse({'ok': True, 'liked': False, 'me_gustas': publicacion.me_gustas})
 
 @login_required
 def mis_publicaciones(request):
@@ -346,55 +336,44 @@ def modificar_publicacion_ajax(request, id):
 
     return JsonResponse({'message': 'Método no permitido.'}, status=405)
 
+def _puede_eliminar(request, publicacion):
+    if publicacion.user_id == request.user.id:
+        return True
+    return verificar_permisos_categoria_id(
+        request,
+        ['crear contenido', 'gestionar contenido otros'],
+        publicacion.categoria_id,
+    )
+
+
 @login_required
-# @check_permiso_publicacion_modificar(['crear contenido'])
+@require_POST
 def eliminar_publicacion(request, publicacion_id):
     """
-    Vista para eliminar una publicación.
-
-    Busca una publicación por su ID y la elimina si la solicitud es POST.
-    Luego, redirige a 'Mis Publicaciones'.
-
-    Args:
-        request (HttpRequest): La solicitud HTTP recibida.
-        publicacion_id (int): ID de la publicación que se desea eliminar.
-
-    Returns:
-        HttpResponse: Renderiza la página de confirmación de eliminación o redirige tras eliminar.
+    Elimina una publicación propia o una que el rol permite gestionar.
+    Solo acepta POST: visitar la URL no borra nada.
     """
     publicacion = get_object_or_404(Publicacion, id=publicacion_id)
-    if not verificar_permisos_categoria_id(request, ['crear contenido'], publicacion.categoria_id):
-        return render(request, 'sin_permiso.html')
+    if not _puede_eliminar(request, publicacion):
+        return _respuesta_accion(request, {'ok': False, 'message': 'No puedes eliminar esta publicación.'}, status=403)
 
-    if request.method == 'POST':
-        publicacion.delete()
-        return redirect('home')
-    return render(request, 'eliminarpublicacion.html', {'publicacion': publicacion})
+    publicacion.delete()
+    return _respuesta_accion(request, {'ok': True}, redirect_to='mis_publicaciones')
 
 @login_required
+@require_POST
 def eliminar_publicacion_otros(request, publicacion_id):
     """
-    Vista para eliminar una publicación de un tercero.
-
-    Busca una publicación por su ID y la elimina si la solicitud es POST.
-    Luego, redirige a 'Gestion de publicaciones'.
-
-    Args:
-        request (HttpRequest): La solicitud HTTP recibida.
-        publicacion_id (int): ID de la publicación que se desea eliminar.
-
-    Returns:
-        HttpResponse: Renderiza la página de confirmación de eliminación o redirige tras eliminar.
+    Elimina la publicación de otra persona si el rol lo permite.
+    Solo acepta POST: visitar la URL no borra nada.
     """
 
     publicacion = get_object_or_404(Publicacion, id=publicacion_id)
     if not verificar_permisos_categoria_id(request, ['gestionar contenido otros'], publicacion.categoria_id):
-        return render(request, 'sin_permiso.html')
-    
-    if request.method == 'POST':
-        publicacion.delete()
-        return redirect('home')
-    return render(request, 'eliminarpublicacion.html', {'publicacion': publicacion})
+        return _respuesta_accion(request, {'ok': False, 'message': 'No puedes eliminar esta publicación.'}, status=403)
+
+    publicacion.delete()
+    return _respuesta_accion(request, {'ok': True}, redirect_to='home')
 
 @login_required
 def seleccionar_plantilla(request, categoria_id):
@@ -468,45 +447,31 @@ def personalizable(request, categoria_id):
 from django.http import JsonResponse
 from .models import Publicacion
 
+@login_required
+@require_POST
 def crear_publicacion_ajax(request):
     """
-    Vista para crear una nueva publicación mediante una solicitud AJAX.
-
-    Esta vista permite crear una nueva publicación en estado "borrador"
-    asociada a una categoría específica. La solicitud debe incluir un
-    JSON con el 'categoria_id'. La publicación se crea asociada al usuario
-    autenticado.
-
-    Args:
-        request (HttpRequest): La solicitud HTTP recibida.
-
-    Returns:
-        JsonResponse: Respuesta en formato JSON con el ID de la publicación recién creada en caso de éxito o un mensaje de error en caso contrario.
+    Crea el borrador una sola vez y devuelve su id.
     """
-    if request.method == 'POST':
-        try:
-            # Leer los datos JSON enviados desde el cliente
-            dataId = json.loads(request.body)
-            categoria_id = dataId.get('categoria_id')
-            
-            if not categoria_id:
-                return JsonResponse({'error': 'categoria_id es requerido'}, status=400)
-            
-            # Crear la publicación inicial con estado borrador
-            publicacion = Publicacion.objects.create(
-                categoria_id=categoria_id, # Categoría enviada desde el frontend
-                estado='borrador',
-                user=request.user,
-                titulo='',
-                contenido_html=''
-            )
-            return JsonResponse({'publicacion_id': publicacion.id}, status=201)
-        except Exception as e:
-            # Log completo del error
-            error_message = traceback.format_exc()
-            print(error_message)  # Para ver en la consola del servidor
-            return JsonResponse({'error': str(e), 'details': error_message}, status=400)
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        data_id = json.loads(request.body or '{}')
+        categoria_id = data_id.get('categoria_id')
+        if not categoria_id:
+            return JsonResponse({'ok': False, 'message': 'Falta la categoría.'}, status=400)
+        if not verificar_permisos_categoria_id(request, ['crear contenido'], categoria_id):
+            return JsonResponse({'ok': False, 'message': 'No puedes crear contenido en esta categoría.'}, status=403)
+        publicacion = Publicacion.objects.create(
+            categoria_id=categoria_id,
+            estado='borrador',
+            user=request.user,
+            titulo='',
+            contenido_html='',
+        )
+        return JsonResponse({'ok': True, 'publicacion_id': publicacion.id}, status=201)
+    except Exception as e:
+        error_message = traceback.format_exc()
+        print(error_message)
+        return JsonResponse({'ok': False, 'message': str(e)}, status=400)
 
 
 @login_required
@@ -526,6 +491,10 @@ def guardar_publicacion_ajax(request, publicacion_id):
 
     if request.method == 'POST':
         publicacion = get_object_or_404(Publicacion, id=publicacion_id)
+        if publicacion.user_id != request.user.id and not verificar_permisos_categoria_id(
+            request, ['gestionar contenido otros'], publicacion.categoria_id
+        ):
+            return JsonResponse({'ok': False, 'message': 'No puedes editar esta publicación.'}, status=403)
 
         publicacion_antigua_contenido = publicacion.contenido_html
         publicacion_antigua_titulo = publicacion.titulo
@@ -575,8 +544,8 @@ def guardar_publicacion_ajax(request, publicacion_id):
         #     )
 
 
-        return JsonResponse({'status': 'success'})
-    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+        return JsonResponse({'ok': True, 'publicacion_id': publicacion.id, 'message': 'Guardado.'})
+    return JsonResponse({'ok': False, 'message': 'Método no permitido.'}, status=405)
 
 @login_required
 def comentario(request, publicacion_id):
@@ -596,18 +565,34 @@ def comentario(request, publicacion_id):
     # Obtener la publicación en base al id
     publicacion = get_object_or_404(Publicacion, id=publicacion_id)
     if not verificar_permisos_categoria_id(request, ['interactuar publicaciones'], publicacion.categoria_id):
+        if _es_fetch(request):
+            return JsonResponse({'ok': False, 'message': 'No puedes comentar en esta categoría.'}, status=403)
         return render(request, 'sin_permiso.html')
     ##
     # Si el formulario ha sido enviado
     if request.method == 'POST':
         form = ComentarioForm(request.POST)
-        if form.is_valid():
-            comentario = form.save(commit=False)
-            comentario.user = request.user
-            comentario.publicacion = publicacion  # Asignar el comentario a la publicación
-            comentario.save()
-            # Redireccionar después de guardar el comentario (opcional)
-            return redirect(f"{reverse('previsualizar_publicacion', args=[publicacion_id])}#comentario_{comentario.id}")
+        if not form.is_valid():
+            if _es_fetch(request):
+                return JsonResponse({'ok': False, 'message': 'Escribe un comentario antes de publicarlo.'}, status=400)
+            return render(request, 'comentar.html', {'form': form, 'publicacion': publicacion})
+        comentario = form.save(commit=False)
+        comentario.user = request.user
+        comentario.publicacion = publicacion
+        comentario.save()
+        if _es_fetch(request):
+            return JsonResponse({
+                'ok': True,
+                'comentario': {
+                    'id': comentario.id,
+                    'username': comentario.user.username,
+                    'perfil': reverse('perfil', args=[comentario.user.username]),
+                    'fecha': timezone.localtime(comentario.fecha_creacion).strftime('%d %b %Y, %H:%M'),
+                    'descripcion': comentario.descripcion,
+                    'eliminar': reverse('eliminar_comentario', args=[comentario.id]),
+                },
+            })
+        return redirect(f"{reverse('previsualizar_publicacion', args=[publicacion_id])}#comentario_{comentario.id}")
     else:
         form = ComentarioForm()
 
@@ -618,30 +603,24 @@ def comentario(request, publicacion_id):
         })
 
 @login_required
+@require_POST
 def eliminar_comentario(request, comentario_id):
     """
-    Vista para eliminar un comentario de una publicación.
-
-    Permite al usuario autenticado eliminar su propio comentario o un comentario de terceros si tiene permisos.
-
-    Args:
-        request (HttpRequest): La solicitud HTTP recibida.
-        comentario_id (int): ID del comentario a eliminar.
-
-    Returns:
-        HttpResponse: Redirige a la previsualización de la publicación tras eliminar el comentario.
+    Elimina un comentario propio, o uno ajeno si el rol lo permite.
+    Solo acepta POST: visitar la URL no borra nada.
     """
 
     comentario = get_object_or_404(Comentario, id=comentario_id)
-
-    publicacion = get_object_or_404(Publicacion, id=comentario.publicacion_id)
-    if(comentario.user_id != request.user.id):
+    publicacion = comentario.publicacion
+    if comentario.user_id != request.user.id:
         if not verificar_permisos_categoria_id(request, ['gestionar contenido otros'], publicacion.categoria_id):
-            return render(request, 'sin_permiso.html')
-    
-    if request.method == 'POST':
-        comentario.delete()
-        return redirect('previsualizar_publicacion', publicacion_id=comentario.publicacion.id)
+            return _respuesta_accion(request, {'ok': False, 'message': 'No puedes eliminar este comentario.'}, status=403)
+
+    publicacion_id = publicacion.id
+    comentario.delete()
+    if _es_fetch(request):
+        return JsonResponse({'ok': True})
+    return redirect('previsualizar_publicacion', publicacion_id=publicacion_id)
     
 @csrf_exempt
 def modificar_publicacion_ajax(request, id):

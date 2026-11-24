@@ -5,8 +5,9 @@ Define las vistas para la gestión de categorías, roles, y otras funcionalidade
 con la autenticación y administración de usuarios.
 """
 
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from .models import *
 from .forms import *
 from crearpublicaciones.models import Comentario
@@ -25,32 +26,35 @@ from django.contrib.auth.models import User
 
 from django.db.models import Q
 
+def _publicaciones_publicadas():
+    return Publicacion.objects.filter(
+        estado='publicado',
+        categoria__estado='Activo',
+    ).select_related('categoria', 'user').order_by('-fecha_creacion')
+
+
+def _responder_lista(request, publicaciones, keyword='', categoria='', fecha='', autor=''):
+    paginator = Paginator(publicaciones, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    context = {
+        'page_obj': page_obj,
+        'keyword': keyword,
+        'categoria': categoria,
+        'fecha': fecha,
+        'autor': autor,
+    }
+    if request.headers.get('X-Requested-With') == 'fetch':
+        html = render_to_string('rol/_resultados.html', context, request=request)
+        return JsonResponse({'ok': True, 'html': html})
+    return render(request, 'rol/home.html', context)
+
+
 @login_required
 def home(request):
     """
     Renderiza la página principal para usuarios autenticados.
-
-    Argumentos:
-        categorias (QuerySet): Lista de todas las categorías disponibles.
-
-    Retorna:
-        HttpResponse: Renderiza la plantilla "rol/home.html" con el contexto proporcionado.
     """
-    publicaciones = list((Publicacion.objects.all()).order_by('-fecha_creacion'))
-    publicacones_filtradas = []
-    numero_comentarios = []
-    for i in publicaciones:
-        if i.estado == 'publicado':
-            publicacones_filtradas.append(i)
-
-    paginator = Paginator(publicacones_filtradas, 10)  # Muestra 10 publicaciones por página
-
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    return render(request, "rol/home.html", {
-        'page_obj': page_obj
-    })
+    return _responder_lista(request, _publicaciones_publicadas())
 
 @login_required
 def publicacionCategoria(request, descripcion_corta):
@@ -533,8 +537,7 @@ def filtrar_publicaciones(request):
     fecha = request.GET.get('date-from', '')
     autor = request.GET.get('autor', '')
 
-    # Filtrar las publicaciones publicadas
-    publicaciones = Publicacion.objects.filter(estado='publicado').order_by('-fecha_creacion')
+    publicaciones = _publicaciones_publicadas()
 
     if keyword:
         publicaciones = publicaciones.filter(Q(titulo__icontains=keyword) | Q(contenido_html__icontains=keyword))
@@ -545,14 +548,4 @@ def filtrar_publicaciones(request):
     if autor:
         publicaciones = publicaciones.filter(user__username__icontains=autor)
 
-    # Paginación de las publicaciones filtradas
-    paginator = Paginator(publicaciones, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    return render(request, 'rol/home.html', {
-        'page_obj': page_obj,
-        'keyword': keyword,
-        'categoria': categoria,
-        'fecha': fecha,
-        'autor': autor})
+    return _responder_lista(request, publicaciones, keyword, categoria, fecha, autor)

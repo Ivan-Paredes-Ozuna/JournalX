@@ -1,115 +1,76 @@
 {% extends 'encabezado.html' %}
-{% block content %}
 {% load static %}
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tablero Kanban</title>
 
-    <link rel="stylesheet" type="text/css" href="{% static 'styles.css' %}">
-    <style>
-      *{
-        font-family: 'Montserrat', sans-serif;
-      }
+{% block title %}Revisión · Journal X{% endblock %}
 
-      .lanes {
-        width: 100%;
-        text-align: center;
-        text-align-last: center;
-        display: flex;
-        justify-content: space-between;
-        width: 100%;
-      }
-
-      .swim-lane {
-        flex: 1;
-        margin: 10px;
-        padding: 10px;
-        box-sizing: border-box; 
-        background-color: #202124;
-      }
-
-      .heading {
-        text-align: center;
-      }
-
-      .task {
-        color: #FFFFFF;
-        padding: 8px;
-        margin: 5px 0;
-        border-radius: 5px;
-        background-color: #171717;
-        cursor: move;
-      }
-
-      .task:hover{
-        filter: brightness(0.9)
-      }
-
-      .board{
-        border-radius: 15px;
-      }
-
-      .category-title {
-        text-align: center;
-        font-size: 24px;
-        color: #FFFFFF;
-        margin-top: 20px;
-      }
-    </style>
-  </head>
-  <body>
-    <br>
-    <div class="board">
-      <!-- Mostrar el nombre de la categoría activa -->
-      <h2 class="category-title">Categoría: {{ categoria.descripcion_corta }}</h2>
-      
-      <div class="lanes">
-        <!-- Borrador -->
-        <div class="swim-lane" id="todo-lane" data-state="borrador">
-          <h3 class="heading">Borrador</h3>
-          {% for publicacion in borrador %}
-            <p class="task" draggable="true" data-id="{{ publicacion.id }}">{{ publicacion.titulo }}</p>
-          {% endfor %}
-        </div>
-
-        <!-- Revisión -->
-        <div class="swim-lane" data-state="revision">
-          <h3 class="heading">Revisión</h3>
-          {% for publicacion in revision %}
-            <p class="task" draggable="true" data-id="{{ publicacion.id }}">{{ publicacion.titulo }}</p>
-          {% endfor %}
-        </div>
-
-        <!-- Publicado -->
-        <div class="swim-lane" data-state="publicado">
-          <h3 class="heading">Publicado</h3>
-          {% for publicacion in publicado %}
-            <p class="task" draggable="true" data-id="{{ publicacion.id }}">{{ publicacion.titulo }}</p>
-          {% endfor %}
-        </div>
-
-        <!-- Rechazado -->
-        <div class="swim-lane" data-state="rechazado">
-          <h3 class="heading">Rechazado</h3>
-          {% for publicacion in rechazado %}
-            <p class="task" draggable="true" data-id="{{ publicacion.id }}">{{ publicacion.titulo }}</p>
-          {% endfor %}
-        </div>
-
-        <!-- Inactivo -->
-        <div class="swim-lane" data-state="inactivo">
-          <h3 class="heading">Inactivo</h3>
-          {% for publicacion in inactivo %}
-            <p class="task" draggable="true" data-id="{{ publicacion.id }}">{{ publicacion.titulo }}</p>
-          {% endfor %}
-        </div>
-      </div>
+{% block content %}
+<header class="page-head">
+    <div>
+        <p class="kicker">Tablero</p>
+        <h1>{{ categoria.descripcion_corta }}</h1>
+        <p class="board-help">El orden va de borrador a publicado. Arrastra una tarjeta para moverla. Publicar o rechazar pide confirmación.</p>
     </div>
-    <script src="{% static 'drag.js' %}"></script>
-    <script src="{% static 'todo.js' %}"></script>
-  </body>
-</html>
+</header>
+<p id="board-status" class="status" role="status"></p>
+<div id="board-confirm" class="board-confirm" hidden>
+    <p id="board-confirm-text"></p>
+    <div class="actions">
+        <button type="button" class="btn" id="board-confirm-yes">Confirmar</button>
+        <button type="button" class="btn-ghost" id="board-confirm-no">Cancelar</button>
+    </div>
+</div>
+
+<div class="lanes">
+    <section class="swim-lane" id="todo-lane" data-state="borrador">
+        <h3>Borrador</h3>
+        <p class="lane-note">Todavía se puede editar.</p>
+        {% for publicacion in borrador %}
+            <article class="task" draggable="true" data-id="{{ publicacion.id }}">
+                <a href="{% url 'previsualizar_publicacion' publicacion.id %}">{{ publicacion.titulo }}</a>
+                <p class="task-meta">{{ publicacion.user.username }} · {{ publicacion.fecha_creacion|date:"d M" }}</p>
+            </article>
+        {% endfor %}
+    </section>
+    <section class="swim-lane" data-state="revision">
+        <h3>Revisión</h3>
+        <p class="lane-note">Espera una decisión.</p>
+        {% for publicacion in revision %}
+            <article class="task" draggable="true" data-id="{{ publicacion.id }}">
+                <a href="{% url 'previsualizar_publicacion' publicacion.id %}">{{ publicacion.titulo }}</a>
+                <p class="task-meta">{{ publicacion.user.username }} · {{ publicacion.fecha_creacion|date:"d M" }}</p>
+            </article>
+        {% endfor %}
+    </section>
+    <section class="swim-lane" data-state="publicado">
+        <h3>Publicado</h3>
+        <p class="lane-note">Visible en el inicio.</p>
+        {% for publicacion in publicado %}
+            <article class="task" draggable="true" data-id="{{ publicacion.id }}">
+                <a href="{% url 'previsualizar_publicacion' publicacion.id %}">{{ publicacion.titulo }}</a>
+                <p class="task-meta">{{ publicacion.user.username }} · {{ publicacion.fecha_creacion|date:"d M" }}</p>
+            </article>
+        {% endfor %}
+    </section>
+    <section class="swim-lane" data-state="rechazado">
+        <h3>Rechazado</h3>
+        <p class="lane-note">No se muestra a los lectores.</p>
+        {% for publicacion in rechazado %}
+            <article class="task" draggable="true" data-id="{{ publicacion.id }}">
+                <a href="{% url 'previsualizar_publicacion' publicacion.id %}">{{ publicacion.titulo }}</a>
+                <p class="task-meta">{{ publicacion.user.username }} · {{ publicacion.fecha_creacion|date:"d M" }}</p>
+            </article>
+        {% endfor %}
+    </section>
+    <section class="swim-lane" data-state="inactivo">
+        <h3>Inactivo</h3>
+        <p class="lane-note">Oculto, sin borrar.</p>
+        {% for publicacion in inactivo %}
+            <article class="task" draggable="true" data-id="{{ publicacion.id }}">
+                <a href="{% url 'previsualizar_publicacion' publicacion.id %}">{{ publicacion.titulo }}</a>
+                <p class="task-meta">{{ publicacion.user.username }} · {{ publicacion.fecha_creacion|date:"d M" }}</p>
+            </article>
+        {% endfor %}
+    </section>
+</div>
+<script src="{% static 'drag.js' %}"></script>
 {% endblock %}

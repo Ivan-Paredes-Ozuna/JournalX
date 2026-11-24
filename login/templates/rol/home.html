@@ -1,287 +1,104 @@
 {% extends 'encabezado.html' %}
+{% load custom_filters %}
 
-{% block content%}
-<head>
-    <title>Pagina de Inicio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-    <style>
+{% block title %}Inicio · Journal X{% endblock %}
 
-        .welcome {
-            font-size: 18px;
-            text-align: justify;
-            margin-left: 10%;
-            margin-bottom: 20px;
-        }
+{% block content %}
+<header class="page-head">
+    <div>
+        <p class="kicker">Publicaciones</p>
+        <h1>Inicio</h1>
+        <p>Textos publicados. Abre uno para leerlo completo.</p>
+    </div>
+    <button type="button" class="btn-ghost" id="filter-toggle" aria-expanded="{% if keyword or categoria or fecha or autor %}true{% else %}false{% endif %}" aria-controls="filtros">Filtrar</button>
+</header>
 
-        .article-container {
-            display: flex;
-            align-items: flex-start;
-            background-color: #171717;
-            padding: 20px;
-            border-radius: 20px;
-            margin-left: 15%;
-            margin-right: 15%;
-            margin-bottom: 2%;
-        }
-
-        .article-container img {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            padding: 10;
-            margin: 20px;
-        }
-
-        .article-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-
-        .description {
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 10px;
-        }
-
-        #search-button {
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            position: absolute;
-            right: 500px;
-            top: 15px;
-        }
-
-        #filter-options {
-            display: none;
-            margin-left: 15%;
-            margin-right: 15%;
-            margin-top: 10px;
-            border: 1px solid #333;
-            padding: 20px;
-            background-color: #171717;
-            border-radius: 10px;
-            color: #fff;
-        }
-
-        #filter-options.active {
-            display: block;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-
-        form input, form select, form button {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #444;
-            background-color: #1e1e1e;
-            color: #fff;
-        }
-
-        button {
-            background-color: #4C994B;
-            color: #fff;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #3B7A3B;
-        }
-
-        #search-button img {
-            filter: invert(100%);
-            width: 20px;
-        }
-
-        #search-button img:hover {
-            filter: invert(50%);
-        }
-
-        .filter-tag {
-            background-color: #4C994B;
-            color: #fff;
-            padding: 5px 10px;
-            margin: 5px;
-            border-radius: 10px;
-            display: inline-block;
-            position: relative;
-        }
-
-        .filter-tag .remove-filter {
-            background-color: red;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            text-align: center;
-            line-height: 20px;
-        }
-
-        .disabled {
-            background-color: #333;
-            color: #888;
-            pointer-events: none;
-        }
-
-        select option:first-child {
-            color: #888;
-        }
-    </style>
-</head>
-
-<body>
-    <button id="search-button">
-        <img src="https://cdn-icons-png.flaticon.com/512/622/622669.png" alt="Lupa" width="20px">
-    </button>
-
-    <div id="filter-options">
-        <div id="selected-filters" style="margin-left: 0px; margin-top: 0px; color: #fff;">
-            <h4>Filtros seleccionados:</h4>
-            <div id="filter-summary">
-                <span id="no-filters">Ningún filtro seleccionado</span>
-            </div>
-        </div>
-
-        <form id="search-filters" style="margin-top: 10px;" action="/search" method="GET">
+<section id="filtros" class="filters {% if keyword or categoria or fecha or autor %}is-open{% endif %}">
+    <div class="chips" id="filter-summary" aria-live="polite"></div>
+    <form id="search-filters" action="{% url 'search' %}" method="get">
+        <div class="filter-grid">
             <div>
-                <label for="keyword">Palabras clave</label>
-                <input type="text" placeholder="Palabras clave..." id="keyword" name="keyword" value="{{ keyword }}">
+                <label for="keyword">Palabras</label>
+                <input type="search" id="keyword" name="keyword" value="{{ keyword|default:'' }}">
             </div>
-
             <div>
                 <label for="categoria">Categoría</label>
                 <select id="categoria" name="category">
-                    <option value="">Ninguno</option>
+                    <option value="">Todas</option>
                     {% for cat in categorias %}
-                        <option value="{{ cat.descripcion_corta }}" {% if categoria == cat.descripcion_corta %}selected{% endif %}>
-                            {{ cat.descripcion_corta }}
-                        </option>
+                        <option value="{{ cat.descripcion_corta }}" {% if categoria == cat.descripcion_corta %}selected{% endif %}>{{ cat.descripcion_corta }}</option>
                     {% endfor %}
                 </select>
             </div>
-
             <div>
-                <label for="fecha">Fecha desde</label>
-                <input type="date" id="fecha" name="date-from" value="{{ fecha }}">
+                <label for="fecha">Desde</label>
+                <input type="date" id="fecha" name="date-from" value="{{ fecha|default:'' }}">
             </div>
-
-            <div class="form-group">
+            <div>
                 <label for="autor">Autor</label>
                 <select id="autor" name="autor">
-                    <option value="">Ninguno</option>
+                    <option value="">Cualquiera</option>
                     {% for i in autores %}
-                        <option value="{{ i.username }}" {% if autor == i.username %}selected{% endif %}>
-                            {{ i.username }}
-                        </option>
+                        <option value="{{ i.username }}" {% if autor == i.username %}selected{% endif %}>{{ i.username }}</option>
                     {% endfor %}
                 </select>
             </div>
-
-            <button type="submit">Buscar</button>
-        </form>
-    </div>
-
-    <br><br><br>
-    {% for i in page_obj %}
-        {% if i.categoria.estado == 'Activo' %}
-            <div class="article-container" style="text-align: justify;">
-                <div class="article-content" style="width: 100%;">
-                    <h2 style="text-transform: uppercase;" class="article-title">{{ i.titulo }}</h2>
-                    <div class="category"> <a style="text-transform: uppercase;" href="{% url 'categoria' i.categoria.descripcion_corta %}">{{ i.categoria.descripcion_corta }}</a> </div>
-                    <div class="description">
-                        <a href="/perfil/{{i.user }}"><h3>Autor: {{ i.user }}</h3></a>
-                        {% load custom_filters %}
-
-                        {{ i.contenido_html|solo_parrafos|slice:":255" }}...
-                    </div>
-                    <a class="read-more" href="{% url 'previsualizar_publicacion' i.id %}">LEER MÁS</a>
-                    <p style="text-align: right;"><strong>Visualizaciones:</strong> {{ i.vistas }} | <strong>Likes: </strong>{{ i.me_gustas }}</p>
-                </div>
-            </div>
-        {% endif %}
-    {% endfor %}
-
-    <div class="pagination" style="text-align: center;">
-        <span>
-            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
-        </span>
-
-        <div>
-            {% if page_obj.has_previous %}
-                <a href="?page=1">&laquo; Primera</a>
-                <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <strong>{{ num }}</strong>
-                {% elif num > page_obj.number|add:'-5' and num < page_obj.number|add:'5' %}
-                    <a href="?page={{ num }}">{{ num }}</a>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}">Última &raquo;</a>
-            {% endif %}
         </div>
-    </div>
+        <div class="actions" style="margin-top: 14px;">
+            <button type="submit">Aplicar filtros</button>
+            <a class="btn-ghost" id="clear-filters" href="{% url 'home' %}">Quitar filtros</a>
+        </div>
+    </form>
+</section>
 
-    <script>
-        document.getElementById('search-button').addEventListener('click', function() {
-            const filterOptions = document.getElementById('filter-options');
-            filterOptions.classList.toggle('active');
+<div id="resultados">
+    {% include "rol/_resultados.html" %}
+</div>
+<p id="resultados-status" class="status" role="status"></p>
+
+<script>
+    const filterToggle = document.getElementById("filter-toggle");
+    const filterPanel = document.getElementById("filtros");
+    filterToggle.addEventListener("click", function () {
+        const open = filterPanel.classList.toggle("is-open");
+        filterToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    function removeFilter(id) {
+        document.getElementById(id).value = "";
+        updateSelectedFilters();
+    }
+
+    function updateSelectedFilters() {
+        const keyword = document.getElementById("keyword").value;
+        const categoria = document.getElementById("categoria").value;
+        const fecha = document.getElementById("fecha").value;
+        const autor = document.getElementById("autor").value;
+        const summary = document.getElementById("filter-summary");
+        summary.innerHTML = "";
+        const items = [];
+        if (keyword) items.push(["keyword", "Palabra: " + keyword]);
+        if (categoria) items.push(["categoria", "Categoría: " + categoria]);
+        if (fecha) items.push(["fecha", "Desde: " + fecha]);
+        if (autor) items.push(["autor", "Autor: " + autor]);
+        items.forEach(function (item) {
+            const chip = document.createElement("span");
+            chip.className = "chip";
+            chip.append(document.createTextNode(item[1]));
+            const button = document.createElement("button");
+            button.type = "button";
+            button.setAttribute("aria-label", "Quitar filtro");
+            button.textContent = "×";
+            button.addEventListener("click", function () { removeFilter(item[0]); });
+            chip.append(button);
+            summary.append(chip);
         });
-    
-        function removeFilter(filterId) {
-            document.getElementById(filterId).value = "";
-            updateSelectedFilters();
-        }
-    
-        function updateSelectedFilters() {
-            const keyword = document.getElementById('keyword').value;
-            const categoria = document.getElementById('categoria').value;
-            const fecha = document.getElementById('fecha').value;
-            const autor = document.getElementById('autor').value;
-    
-            const filterSummary = document.getElementById('filter-summary');
-            filterSummary.innerHTML = ''; // Limpia el contenido actual
-    
-            if (keyword || categoria || fecha || autor) {
-                if (keyword) filterSummary.innerHTML += `<span class="filter-tag">Palabra clave: ${keyword} <span class="remove-filter" onclick="removeFilter('keyword')">x</span></span>`;
-                if (categoria) filterSummary.innerHTML += `<span class="filter-tag">Categoría: ${categoria} <span class="remove-filter" onclick="removeFilter('categoria')">x</span></span>`;
-                if (fecha) {
-                    const dateParts = fecha.split('-');
-                    const formattedDate = dateParts[2] +'/'+ dateParts[1] +'/'+ dateParts[0];
-                    filterSummary.innerHTML += `<span class="filter-tag">Fecha desde: ${formattedDate} <span class="remove-filter" onclick="removeFilter('fecha')">x</span></span>`;
-                }
-                if (autor) filterSummary.innerHTML += `<span class="filter-tag">Autor: ${autor} <span class="remove-filter" onclick="removeFilter('autor')">x</span></span>`;
-            } else {
-                filterSummary.innerHTML = '<span id="no-filters">Ningún filtro seleccionado</span>';
-            }
-        }
-    
-        document.querySelectorAll('#search-filters input, #search-filters select').forEach(item => {
-            item.addEventListener('input', updateSelectedFilters);
-        });
-    
-    </script>
+    }
 
-</body>
-
+    document.querySelectorAll("#search-filters input, #search-filters select").forEach(function (item) {
+        item.addEventListener("input", updateSelectedFilters);
+        item.addEventListener("change", updateSelectedFilters);
+    });
+    updateSelectedFilters();
+</script>
 {% endblock %}

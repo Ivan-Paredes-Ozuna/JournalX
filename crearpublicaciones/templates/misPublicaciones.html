@@ -1,115 +1,51 @@
 {% extends 'encabezado.html' %}
+{% load custom_filters %}
 
-{% block content%}
-<head>
-    <title>Mis Publicaciones</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background-color: #171717;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center; 
-            margin-bottom: 15px; 
-            font-family: 'Yanone Kaffeesatz';
-            font-size: 40px;
-        }
-        .publicacion-list {
-            list-style: none;
-            padding: 0;
-        }
-        .publicacion-list li {
-            background-color: #202124;
-            margin-bottom: 20px;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .publicacion-list h3 {
-            margin: 0 0 10px;
-            font-size: 1.5em;
-        }
-        .publicacion-list p {
-            margin: 0 0 15px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .publicacion-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .publicacion-actions a, .publicacion-actions button {
-            padding: 10px 15px;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1em;
-            border: none;
-            cursor: pointer;
-            text-align: center;
-            display: inline-block;
-            width: 120px;
-        }
-        .publicacion-actions a:hover, .publicacion-actions button:hover {
-            filter: brightness(1.2)
-        }
-        .no-publicaciones, .back-to-home {
-            text-align: center;
-            font-size: 1.2em;
-            padding: 20px;
-        }
-        .back-to-home a {
-            padding: 10px 20px;
-            background-color: #4571E4;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1.2em;
-        }
-        .back-to-home a:hover {
-            filter: brightness(1.2)
-        }
-        .eliminar {
-            background-color: #D24330;
-        }
-        .modificar, .previsualizar{
-            background-color: #4C994B;
-        }
-    </style>
-</head>
-<body>
-    <h1>Mis Publicaciones</h1>
-    <div class="container">
-        {% if publicaciones %}
-            <ul class="publicacion-list">
-                {% for publicacion in publicaciones %}
-                    <li>
-                        <h3>{{ publicacion.titulo }}</h3>
-                        <p>{{ publicacion.texto_corto|truncatechars:100 }}</p>
-                        <div class="publicacion-actions">
-                            <a class="previsualizar" href="{% url 'previsualizar_publicacion' publicacion.id %}">Previsualizar</a>
-                            <a class="modificar" href="{% url 'modificar_publicacion' publicacion.id %}">Modificar</a>
-                            <a class="btn-edit" href="{% url 'historial_publicacion' publicacion.id %}">Historial</a>
-                            <a class="eliminar" href="{% url 'eliminar_publicacion' publicacion.id %}">Eliminar</a>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="no-publicaciones">No tienes publicaciones aún.</p>
-            <p>Si deseas crear contenido, ponte en contacto con nuestro Administrador para realizar una solicitud de ascenso de Rol</p>
-            <p>email: admin@journalx.com</p>
-        {% endif %}
-        <div class="back-to-home">
-            <a href="{% url 'home' %}">Inicio</a>
-        </div>
+{% block title %}Mis publicaciones · Journal X{% endblock %}
+
+{% block content %}
+<header class="page-head">
+    <div>
+        <p class="kicker">Tu trabajo</p>
+        <h1>Mis publicaciones</h1>
+        <p>El estado indica en qué punto está cada texto. Eliminar pide confirmación en la pantalla siguiente.</p>
     </div>
+</header>
+
+{% if publicaciones %}
+    <div class="stack">
+        {% for publicacion in publicaciones %}
+            <article class="item">
+                <p class="kicker">
+                    <span class="badge badge-{{ publicacion.estado }}">{{ publicacion.get_estado_display }}</span>
+                    {% if publicacion.categoria %} · {{ publicacion.categoria.descripcion_corta }}{% endif %}
+                </p>
+                <h2>{{ publicacion.titulo }}</h2>
+                <p class="excerpt">{{ publicacion.contenido_html|solo_parrafos|striptags|truncatechars:160 }}</p>
+                <p class="byline">Creada el {{ publicacion.fecha_creacion|date:"d M Y" }}</p>
+                <div class="actions">
+                    <a class="btn" href="{% url 'previsualizar_publicacion' publicacion.id %}">Leer</a>
+                    {% if publicacion.estado != 'publicado' %}
+                        <a class="btn-ghost" href="{% url 'modificar_publicacion' publicacion.id %}">Modificar</a>
+                    {% endif %}
+                    <a class="btn-ghost" href="{% url 'historial_publicacion' publicacion.id %}">Historial</a>
+                    <button
+                        type="button"
+                        class="btn-danger"
+                        data-delete="{% url 'eliminar_publicacion' publicacion.id %}"
+                        data-remove="article"
+                        data-label="Eliminar"
+                        data-confirm="¿Eliminar «{{ publicacion.titulo }}»? No se puede deshacer.">Eliminar</button>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty">
+        <h2>Todavía no tienes publicaciones</h2>
+        <p>Si en el menú aparece Escribir, elige una categoría y guarda un borrador. Si no aparece, pide el permiso de crear contenido a la administración.</p>
+        <p>Correo: <a href="mailto:admin@journalx.com">admin@journalx.com</a></p>
+        <a class="btn" href="{% url 'home' %}">Volver al inicio</a>
+    </div>
+{% endif %}
 {% endblock %}

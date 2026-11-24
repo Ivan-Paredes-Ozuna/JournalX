@@ -1,47 +1,7 @@
 {% extends 'encabezado.html' %}
 
 {% block content%}
-<head>
-    <style>
 
-        .articles {
-            margin-top: 20px;
-        }
-
-        .article {
-            padding: 10px;
-            border-bottom: 1px solid #ccc;
-        }
-         /* Estilos para ocultar el contenido inicialmente */
-         .contenido {
-            display: none;
-            margin-top: 10px;
-        }
-        
-        /* Estilo del botón */
-        .toggle-button {
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            border: none;
-            text-align: center;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        
-        .toggle-button:hover {
-            background-color: #45a049;
-        }
-
-        .contenido{
-            margin: 0 auto;
-            align-items: center;
-        }
-
-    </style>
-</head>
-<body>
     <br>
     {{reporte.html_content|safe}}
     

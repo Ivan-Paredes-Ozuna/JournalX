@@ -1,75 +1,26 @@
-<!-- eliminarpublicacion.html -->
-
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% load static %}
+    <title>Eliminar publicación · Journal X</title>
     <link rel="shortcut icon" href="{% static 'css/favicon.ico' %}">
-    <title>Eliminar Publicación</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #171717;
-            color: #FFFFFF;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .confirmacion {
-            background-color: #202124;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            width: 400px;
-            text-align: center;
-        }
-        h1 {
-            color: #d9534f;
-            margin-bottom: 20px;
-        }
-        .btn-danger, .btn-secondary {
-            font-family: 'Montserrat', sans-serif;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            display: inline-block;
-            margin: 10px;
-            text-decoration: none;
-        }
-        .btn-danger {
-            background-color: #D24330;
-            color: white;
-        }
-        .btn-danger:hover {
-            filter: brightness(1.2)
-        }
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-        }
-        .btn-secondary:hover {
-            filter: brightness(1.2)
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Yanone+Kaffeesatz:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/journalx.css' %}">
 </head>
-<body>
-
-    <div class="confirmacion">
-        <h1>Eliminar Publicación</h1>
-        <p>¿Estás seguro de que quieres eliminar esta publicación?</p>
-
-        <form method="POST">
+<body class="gate-body">
+    <main class="gate">
+        <p class="kicker">Confirmación</p>
+        <h1>Eliminar</h1>
+        <p>Esta publicación se borra para todos. No se puede recuperar desde la interfaz.</p>
+        <form method="post">
             {% csrf_token %}
-            <button type="submit" class="btn-danger">Eliminar</button>
+            <div class="actions">
+                <button type="submit" class="btn-danger">Eliminar publicación</button>
+                <a class="btn-ghost" href="javascript:history.back()">Cancelar</a>
+            </div>
         </form>
-
-        <a href="javascript:window.history.back();" class="btn-secondary">Cancelar</a>
-    </div>
-
+    </main>
 </body>
 </html>

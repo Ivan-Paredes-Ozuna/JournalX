@@ -1,180 +1,27 @@
 {% extends 'encabezado.html' %}
 
 {% block content %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Editor de Blog</title>
-    <!-- Librería Sortable.js para permitir arrastrar y soltar bloques -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
-    <style>
-        /* Estilos básicos del cuerpo */
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        /* Contenedor principal */
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        /* Estilo para títulos H1 */
-        .tituloplantilla h1 {
-            font-size: 32px;
-            margin-bottom: 20px;
-            text-align: center;
-            padding: 10px;
-            border-bottom: 2px solid #eee;
-            background-color: #171717;
-            border-radius: 10px;
-            color: #000000;
-        }
-        /* Estilos para los bloques de contenido */
-        .block {
-            padding: 10px 40px 10px 10px; /* Ajustar padding para el botón de eliminar */
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #171717;
-            cursor: move;
-            position: relative;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-            min-height: 40px;
-        }
-        /* Estilo para el contenido editable de texto */
-        .block textarea, .block input {
-            width: calc(100% - 40px); /* Ajustar ancho para no interferir con el botón de eliminar */
-            border: none;
-            background-color: transparent;
-            font-size: 16px;
-            padding: 10px;
-            resize: none;
-            outline: none;
-            overflow: hidden;
-        }
-        /* Controles para agregar nuevos bloques */
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        /* Botones de control */
-        .controls button {
-            flex: 1;
-            margin: 5px 5px;
-            padding: 10px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .controls button:hover {
-            background-color: #2980b9;
-        }
-        /* Botón para guardar la publicación */
-        .save-button {
-            width: 100%;
-            padding: 12px;
-            background-color: #2ecc71;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 18px;
-            margin-top: 10px;
-        }
-        .save-button:hover {
-            background-color: #27ae60;
-        }
-        /* Estilos para imágenes redimensionables */
-        .resizable {
-            display: inline-block;
-            resize: both;
-            overflow: auto;
-            max-width: 100%;
-            margin: 10px 0;
-        }
-        .resizable img {
-            display: block;
-            width: 100%;
-            height: auto;
-        }
-        /* Botón de eliminar cuadrado y más pequeño */
-        .delete-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            padding: 3px;
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            border-radius: 3px;
-            font-size: 12px;
-            transition: background-color 0.3s ease;
-            line-height: 18px;
-            text-align: center;
-        }
-        .delete-btn:hover {
-            background-color: #c0392b;
-        }
-        /* Estilo para el bloque fantasma al arrastrar */
-        .sortable-ghost {
-            opacity: 0.5;
-            background-color: #dcdcdc;
-        }
-        /* Estilos para listas de viñetas */
-        .bullet-list {
-            padding-left: 20px;
-        }
-        .bullet-list li {
-            margin-bottom: 5px;
-        }
-        /* Estilo para el bloque de cita */
-        .quote-block {
-            font-style: italic;
-            border-left: 4px solid #ccc;
-            padding-left: 10px;
-            color: #555;
-            background-color: #f9f9f9;
-        }
-    </style>
-</head>
-<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
 
-<!-- Contenedor principal de la página -->
-<div class="container">
-    <!-- Título editable de la publicación -->
-    <h1 contenteditable="true" id="title" class="tituloplantilla">Título Principal</h1>
+<div class="editor-page">
+    <p class="kicker">Borrador · {{ categoria.descripcion_corta }}</p>
+    <h1 contenteditable="true" id="title" data-placeholder="Escribe el título"></h1>
+    <p class="editor-help">Agrega bloques y arrástralos para ordenarlos. Al guardar, el texto queda en borrador.</p>
 
-    <!-- Mostrar el nombre de la categoría -->
-    <h2>Categoría: {{ categoria.descripcion_corta }}</h2>
-
-    <!-- Contenedor para los bloques de contenido -->
     <div id="editor"></div>
 
-    <!-- Controles para agregar nuevos bloques -->
     <div class="controls">
-        <button onclick="addTextBlock()">Texto</button>
-        <button onclick="addImageBlock()">Imagen</button>
-        <button onclick="addHeadingBlock('H2')">Heading 2</button>
-        <button onclick="addHeadingBlock('H3')">Heading 3</button>
-        <button onclick="addBulletListBlock()">Viñetas</button>
-        <button onclick="addQuoteBlock()">Cita</button>
+        <button type="button" onclick="addTextBlock()">Párrafo</button>
+        <button type="button" onclick="addImageBlock()">Imagen</button>
+        <button type="button" onclick="addHeadingBlock('H2')">Subtítulo</button>
+        <button type="button" onclick="addHeadingBlock('H3')">Apartado</button>
+        <button type="button" onclick="addBulletListBlock()">Lista</button>
+        <button type="button" onclick="addQuoteBlock()">Cita</button>
     </div>
 
-    <!-- Botón para guardar la publicación -->
-    <button class="save-button" onclick="saveContent()">Guardar Publicación</button>
+    <button type="button" class="save-button" onclick="saveContent()">Guardar borrador</button>
+    <p id="editor-status" class="status" role="status"></p>
+    <p id="editor-next" hidden><a href="{% url 'mis_publicaciones' %}">Ver mis publicaciones</a></p>
 </div>
 
 <script>
@@ -248,12 +95,37 @@
     }
 
     // Función para guardar el contenido en la base de datos
+    function scrollToBottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function setStatus(message, kind) {
+        const status = document.getElementById('editor-status');
+        status.textContent = message;
+        status.classList.remove('is-error', 'is-ok');
+        if (kind) status.classList.add(kind);
+    }
+
+    let publicacionId = null;
+
     function saveContent() {
-        const title = document.getElementById('title').innerText;
-        const categoriaId = {{ categoria.id }};  // Utilizar el categoria_id del contexto
+        const saveButton = document.querySelector('.save-button');
+        if (saveButton.disabled) return;
+        const title = document.getElementById('title').innerText.trim();
+        if (!title) {
+            setStatus('Escribe un título antes de guardar.', 'is-error');
+            return;
+        }
+        if (!editor.children.length) {
+            setStatus('Agrega al menos un párrafo antes de guardar.', 'is-error');
+            return;
+        }
+        saveButton.disabled = true;
+        saveButton.textContent = 'Guardando…';
+        setStatus('Guardando el borrador…');
+        const categoriaId = {{ categoria.id }};
         const blocks = editor.children;
         let contentHTML = '';
-        let publicacionId = null;
 
         for (let block of blocks) {
             if (block.querySelector('textarea')) {
@@ -283,7 +155,6 @@
             'categoria_id': categoriaId
         };
 
-        // Obtener el token CSRF
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -299,54 +170,43 @@
             return cookieValue;
         }
         const csrftoken = getCookie('csrftoken');
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'fetch'
+        };
 
-        // Realizar la petición POST para crear la publicación inicial
-        fetch("{% url 'crear_publicacion_ajax' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({ categoria_id: categoriaId })
-        }).then(response => {
-            if (response.ok) {
-                return response.json(); // Retorna el JSON con el ID de la publicación
-            } else {
-                throw new Error('Error al crear la publicación inicial');
-            }
-        }).then(dataId=> {
-            publicacionId = dataId.publicacion_id;
-        // Realizar la petición POST para guardar la publicación
-            return fetch(`{% url 'guardar_publicacion_ajax' 0 %}`.replace('0', publicacionId), {
+        const crear = publicacionId
+            ? Promise.resolve()
+            : fetch("{% url 'crear_publicacion_ajax' %}", {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify(data)
-            });
-        }).then(response => {
-            if (response.ok) {
-                alert('¡Publicación guardada!');
-                // Redireccionar a "Mis Publicaciones"
-                window.location.href = "{% url 'mis_publicaciones' %}";
-            } else {
-                response.json().then(data => {
-                    alert('Error al guardar la publicación: ' + data.message);
-                });
+                headers: headers,
+                body: JSON.stringify({ categoria_id: categoriaId })
+            }).then(response => response.json().then(body => {
+                if (!response.ok || !body.publicacion_id) {
+                    throw new Error(body.message || 'No se pudo crear el borrador.');
+                }
+                publicacionId = body.publicacion_id;
+            }));
+
+        crear.then(() => fetch(`{% url 'guardar_publicacion_ajax' 0 %}`.replace('0', publicacionId), {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        })).then(response => response.json().then(body => {
+            if (!response.ok || body.ok === false) {
+                throw new Error(body.message || 'No se pudo guardar. Inténtalo otra vez.');
             }
-        }).catch(error => {
-            console.error('Error:', error);
-            alert('Error al guardar la publicación.');
+            setStatus('Guardado. Puedes seguir editando.', 'is-ok');
+            const next = document.getElementById('editor-next');
+            if (next) next.hidden = false;
+            saveButton.disabled = false;
+            saveButton.textContent = 'Guardar borrador';
+        })).catch(error => {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Guardar borrador';
+            setStatus(error.message || 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.', 'is-error');
         });
     }
-
-    // Función para hacer scroll automáticamente al final de la página
-    function scrollToBottom() {
-        window.scrollTo(0, document.body.scrollHeight);
-    }
 </script>
-
-</body>
-</html>
 {% endblock %}

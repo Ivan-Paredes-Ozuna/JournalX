@@ -1,13 +1,15 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from crearpublicaciones.models import Publicacion
+from django.views.decorators.http import require_POST
+from crearpublicaciones.models import Publicacion, Historial
 from login.models import Categoria, UsuarioRolCategoria, Permiso
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt  # Asegúrate de importar csrf_exempt
 import json
 from login.utils import *
 from datetime import datetime
 from django.utils import timezone
+
+ESTADOS_PUBLICACION = {'borrador', 'revision', 'publicado', 'rechazado', 'inactivo'}
 
 @login_required
 def kanban_board(request, categoria_id=None):
@@ -73,46 +75,35 @@ def kanban_board(request, categoria_id=None):
 
     return render(request, 'index.html', context)
 
-# Vista para actualizar el estado de una tarea
-@csrf_exempt  # Decorador para eximir esta vista de la protección CSRF
 @login_required
+@require_POST
 def update_task_state(request, task_id):
     """
-    View para actualizar el estado de una publicación.
-
-    Args:
-        request (HttpRequest): El objeto de solicitud HTTP.
-        task_id (int): El ID de la publicación a actualizar.
-
-    Returns:
-        JsonResponse: Respuesta JSON indicando el éxito o error de la operación.
+    Cambia el estado de una publicación y deja el motivo en la respuesta.
     """
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'message': 'No se pudo leer el cambio.'}, status=400)
 
-    if request.method == 'POST':
-        try:
-            # Obtener el nuevo estado desde el cuerpo de la solicitud
-            data = json.loads(request.body)
-            new_state = data.get('estado')
-            
-            # Obtener la publicación y actualizar su estado
-            publicacion = get_object_or_404(Publicacion, id=task_id)
-            estado_anterior = publicacion.estado    # Guardar el estado anterior para el historial
-            publicacion.estado = new_state
-            publicacion.fecha_publicacion = timezone.now()
-            publicacion.save()
+    new_state = data.get('estado')
+    if new_state not in ESTADOS_PUBLICACION:
+        return JsonResponse({'ok': False, 'message': 'Ese estado no existe.'}, status=400)
 
-            # Crear un registro en el historial de la publicación
-            Historial.objects.create(
-            publicacion=publicacion,
-            usuario=request.user,
-            accion='cambio_estado',
-            estado_anterior=estado_anterior,
-            estado_nuevo=new_state
-            )
+    publicacion = get_object_or_404(Publicacion, id=task_id)
+    if not verificar_permisos_categoria_id(request, ['cambiar estado publicacion'], publicacion.categoria_id):
+        return JsonResponse({'ok': False, 'message': 'No puedes cambiar el estado de esta publicación.'}, status=403)
 
-            return JsonResponse({"message": "Estado actualizado correctamente"}, status=200)
-        except Publicacion.DoesNotExist:
-            return JsonResponse({"error": "Publicación no encontrada"}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    return JsonResponse({"error": "Método no permitido"}, status=405)
+    estado_anterior = publicacion.estado
+    publicacion.estado = new_state
+    if new_state == 'publicado':
+        publicacion.fecha_publicacion = timezone.now()
+    publicacion.save()
+    Historial.objects.create(
+        publicacion=publicacion,
+        usuario=request.user,
+        accion='cambio_estado',
+        estado_anterior=estado_anterior,
+        estado_nuevo=new_state,
+    )
+    return JsonResponse({'ok': True, 'estado': new_state, 'message': 'Estado actualizado.'})
